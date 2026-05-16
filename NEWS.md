@@ -7,3 +7,8 @@
 - Added clearer errors when optional packages are required.
 - Fixed default argument matching in legacy plotting functions.
 - Added README and roadmap documentation for modernization and public release.
+- Added terra-first input preparation and validation for raster and location inputs.
+- Allowed descriptive location column names while preserving the legacy column-order contract.
+- Updated `anc_extract()` to use terra cell lookup and clearer coordinate validation.
+- Removed the retired `rgeos` package from metadata and updated `popmap_viz()` boundary drawing.
+- Added `validate_popmaps_baseline()` for repeatable comparison against a frozen POPMAPS 1.03 reference result.

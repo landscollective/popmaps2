@@ -23,42 +23,40 @@
 #' @export
 
 anc_extract <- function(pop_raster_list='',input_raster='', input_locs='', dec_lat='', dec_long='') {
-  
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
+
+  if (!is.list(pop_raster_list) || length(pop_raster_list) < 3) {
+    stop("`pop_raster_list` must be a list returned by popmaps().", call. = FALSE)
   }
-  cell_size <- raster::res(raster_surface)[1]
-  species_data <- input_locs
-  num_axes <- length(species_data[1,])-3
-  
-  nrows <- raster_surface@nrows
-  ncols <- raster_surface@ncols
-  ymax <- raster_surface@extent@ymax
-  xmin <- raster_surface@extent@xmin
-  
-  i <- (ymax-dec_lat)/cell_size 
-  if (i<1) {
-    i <- 1
-  } else {
-    i <- trunc(i)
+
+  raster_input <- popmaps_prepare_raster(input_raster)
+  species_data <- popmaps_prepare_locations(input_locs)
+  num_axes <- length(species_data[1,]) - 3
+
+  if (length(pop_raster_list) < (2 + num_axes)) {
+    stop("`pop_raster_list` does not contain enough ancestry coefficient surfaces for `input_locs`.", call. = FALSE)
   }
-  j <- (dec_long-xmin)/cell_size
-  if (j<1) {
-    j <-1
-  } else {
-    j <- trunc(j)
+
+  point <- popmaps_prepare_point(dec_long = dec_long, dec_lat = dec_lat)
+  cell <- terra::cellFromXY(raster_input$rast, point)
+  if (is.na(cell)) {
+    stop("The requested coordinate falls outside `input_raster`.", call. = FALSE)
   }
- 
-  anc_sum <- 0
-  for(m in 3:length(pop_raster_list)) {
-    anc_sum <- anc_sum + pop_raster_list[[m]][i,j]
+
+  row_col <- terra::rowColFromCell(raster_input$rast, cell)
+  i <- row_col[, 1]
+  j <- row_col[, 2]
+
+  anc_vec <- vapply(
+    seq.int(3, 2 + num_axes),
+    function(k) pop_raster_list[[k]][i, j],
+    numeric(1)
+  )
+  anc_sum <- sum(anc_vec)
+
+  if (!is.finite(anc_sum) || anc_sum == 0) {
+    return(rep(NA_real_, num_axes))
   }
-  anc_vec <- NULL
-  for(k in 3:length(pop_raster_list)) {
-   anc_vec <- c(anc_vec,pop_raster_list[[k]][i,j]/anc_sum)
-  }
-  return(anc_vec)
+
+  anc_vec / anc_sum
 }
   

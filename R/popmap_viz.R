@@ -16,9 +16,8 @@
 #'     draw the hard boundaries and ancestry probability surface.
 #' @param pie_radius A float modifying the size of the pie charts depicting empirical ancestry 
 #'     coefficients drawn on top of the probability surface (see Fig. 3 in Massatti & Winkler 2022).
-#' @param boundary_width A float modifying the hard boundaries drawn on top of a probability surface. 
-#'     The scale of the analysis may require this variable to be modified so that adjacent hard 
-#'     boundaries touch one another (see Fig. 3 in Massatti & Winkler 2022).
+#' @param boundary_width Retained for compatibility with POPMAPS 1.03. Boundary buffering
+#'     previously depended on retired spatial packages and is no longer applied.
 #' @param crs A string defining a mapping projection. The default defines the Albers Equal Area 
 #'     Conic projection suitable for the contiguous United States.
 #' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
@@ -33,18 +32,13 @@
 popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=c('bound','ancestry'), pie_radius= 0.15, boundary_width= -0.015,crs="+init=epsg:5070") {
 
   maptype <- match.arg(maptype)
-  if (!requireNamespace("rgeos", quietly = TRUE)) {
-    stop("The 'rgeos' package is required for legacy boundary plotting. This will be replaced in a future sf/terra plotting path.", call. = FALSE)
-  }
   if (!requireNamespace("viridis", quietly = TRUE)) {
     stop("The 'viridis' package is required for popmap_viz().", call. = FALSE)
   }
 
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
-  }
+  raster_surface <- popmaps_prepare_raster(input_raster)$raster
+  input_locs <- popmaps_prepare_locations(input_locs)
+
 	cell_size <- raster::res(raster_surface)[1]
 	nrows <- raster_surface@nrows
 	ncols <- raster_surface@ncols
@@ -52,13 +46,23 @@ popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=
 	xmin <- raster_surface@extent@xmin
 
 	h_boundary <- raster::raster(pop_raster_list[[1]],xmn=xmin,xmx=xmin+(cell_size*ncols),ymn=ymax-(cell_size*nrows),ymx=ymax,crs= sp::CRS(crs))
-	hard_boundary <- raster::rasterToPolygons(h_boundary,dissolve=T)
-	hard_boundary <- sp::spTransform(hard_boundary,CRSobj=sp::CRS(crs))
 
 	ancest_surface <- raster::raster(pop_raster_list[[2]],xmn=xmin,xmx=xmin+(cell_size*ncols),ymn=ymax-(cell_size*nrows),ymx=ymax,crs= sp::CRS(crs))
 	
 	num_axes <- length(input_locs[1,])-3
 	colors_axes <- viridis::viridis(num_axes,begin=0,end=1,direction=-1)
+
+	plot_boundaries <- function() {
+		hard_boundary <- raster::rasterToPolygons(h_boundary,dissolve=F)
+		pop_ids <- as.integer(hard_boundary@data[[1]])
+		for(n in seq_along(pop_ids)) {
+			pop_id <- pop_ids[n]
+			if(is.na(pop_id) || pop_id < 1 || pop_id > num_axes) {
+				next
+			}
+			raster::plot(hard_boundary[n,],add=T,border=colors_axes[pop_id],col=NA,lwd=3)
+		}
+	}
 
 	if(maptype == 'bound') {
 		temp_raster <- h_boundary
@@ -66,9 +70,7 @@ popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=
 		raster::plot(temp_raster,box=F,col=colors,legend=F)
 		maps::map("state", xlim=c(temp_raster@extent[1],temp_raster@extent[2]), ylim=c(temp_raster@extent[3],temp_raster@extent[4]), add=T, col='tan',lwd = 2, fill=T)
 		raster::plot(temp_raster,box=F,col=colors,legend=F, alpha=0.7,add=T)
-		for(n in 1:length(hard_boundary@data[,1])) {
-			raster::plot(rgeos::gBuffer(hard_boundary[n,],byid=T,width=boundary_width),add=T,border=colors_axes[n],cex=1,lwd=3)
-		}
+		plot_boundaries()
 		for(i in 1:length(input_locs$V2)) { 
 			plotrix::floating.pie(input_locs[i,2],input_locs[i,3],as.numeric(input_locs[i,4:(4+(num_axes-1))]),radius=pie_radius,col=colors_axes)
 		}	
@@ -82,9 +84,7 @@ popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=
 		maps::map("state", xlim=c(temp_raster@extent[1],temp_raster@extent[2]), ylim=c(temp_raster@extent[3],temp_raster@extent[4]), add=T, col='tan',lwd = 2, fill=T)
 		raster::plot(temp_raster,box=F,breaks=breakpoints,col=colors,alpha=0.85,add=T)
 		#plot(temp_raster,box=F,col=colors,alpha=0.85,add=T)
-		for(n in 1:length(hard_boundary@data[,1])) {
-			raster::plot(rgeos::gBuffer(hard_boundary[n,],byid=T,width=boundary_width),add=T,border=colors_axes[n],cex=1,lwd=3)
-		}
+		plot_boundaries()
 		for(i in 1:length(input_locs$V2)) { 
 			plotrix::floating.pie(input_locs[i,2],input_locs[i,3],as.numeric(input_locs[i,4:(4+(num_axes-1))]),radius=pie_radius,col=colors_axes)
 		}

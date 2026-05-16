@@ -6,6 +6,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 
 - Keep the POPMAPS 1.03 implementation available as the reference baseline.
 - Add tests around the embedded `Hilaria jamesii` datasets.
+- Continue moving public inputs through the new `terra`-first validation layer.
 - Update examples so they run quickly and do not require retired packages.
 - Add a vignette that reproduces the published workflow at a reduced raster resolution.
 - Profile `popmaps()` and `jackknife()` on representative rasters.

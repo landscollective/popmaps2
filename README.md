@@ -49,10 +49,9 @@ Optional legacy functionality currently requires additional packages:
 
 - `gdistance` for least-cost distance surfaces with `surface = "C"`;
 - `gplots` for `jackknife_viz()`;
-- `viridis` for legacy plotting functions;
-- `rgeos` for legacy boundary buffering in `popmap_viz()`.
+- `viridis` for legacy plotting functions.
 
-`rgeos` has been retired from CRAN, so `popmap_viz()` is a priority target for replacement.
+`rgeos` has been retired from CRAN and is no longer a package dependency. The `popmap_viz()` boundary plotting path no longer applies the old buffered-boundary adjustment, and the full plotting stack remains a priority target for `terra`/`sf` replacement.
 
 ## Data Requirements
 
@@ -60,7 +59,9 @@ The core functions expect three kinds of inputs.
 
 ### 1. Raster Surface
 
-`input_raster` defines the extent and resolution of the interpolation. It may be a `RasterLayer` object or a path readable by `raster::raster()`.
+`input_raster` defines the extent and resolution of the interpolation. It may be a `terra::SpatRaster`, a legacy `raster::RasterLayer`, or a path readable by `terra::rast()`.
+
+Internally, new input handling is `terra`-first. Some legacy modeling and plotting internals still convert to `raster` objects until those paths are fully modernized.
 
 Raster values are used differently depending on `surface`:
 
@@ -81,6 +82,8 @@ Use `threshold` to skip cells where ancestry coefficients should not be estimate
 | 4...n | Ancestry coefficients for each genetic axis or cluster |
 
 The embedded `hija_struc` dataset is the reference format.
+
+The original POPMAPS implementation expected columns named `V1`, `V2`, `V3`, and so on. `popmaps2` now normalizes valid input tables internally, so descriptive column names such as `site`, `lon`, `lat`, `axis1`, `axis2`, and `axis3` are accepted as long as the column order is correct.
 
 ### 3. Optional Sample Points
 
@@ -143,6 +146,14 @@ anc_extract(
   dec_long = -110.9525
 )
 ```
+
+Run the built-in POPMAPS 1.03 baseline validation:
+
+```r
+validate_popmaps_baseline()
+```
+
+This validation uses the bundled `Hilaria jamesii` example data, runs a small ancestry probability surface, and compares every output matrix to a frozen POPMAPS 1.03 reference result. It is intended to catch unintended scientific drift before deeper optimization work.
 
 ## Output Structure
 

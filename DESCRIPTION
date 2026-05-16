@@ -44,16 +44,16 @@ Imports:
     plotrix,
     raster,
     sp,
-    stats
+    stats,
+    terra,
+    utils
 Depends: 
     R (>= 4.1)
 Suggests:
     gdistance,
     gplots,
     knitr,
-    rgeos,
     rmarkdown,
     testthat (>= 3.0.0),
-    terra,
     viridis
 Config/testthat/edition: 3

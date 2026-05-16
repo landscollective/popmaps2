@@ -54,9 +54,20 @@
 
 popmaps <- function(input_raster='', input_locs='', surface='G', empirical_pt_dist=5, num_sites=10, num_tested=3, popmod=-0.001, ncore=4, threshold=0, dist_prob_func=function(popmod_temp,distance) {exp(popmod_temp*distance)}) {
 
-  surface <- match.arg(surface, c("G", "C"))
-  if (surface == "C" && !requireNamespace("gdistance", quietly = TRUE)) {
-    stop("The 'gdistance' package is required when surface = 'C'.", call. = FALSE)
+  prepared <- popmaps_prepare_inputs(
+    input_raster = input_raster,
+    input_locs = input_locs,
+    surface = surface,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    threshold = threshold,
+    ncore = ncore,
+    empirical_pt_dist = empirical_pt_dist,
+    popmod = popmod
+  )
+  surface <- prepared$surface
+  if (!is.function(dist_prob_func)) {
+    stop("`dist_prob_func` must be a function.", call. = FALSE)
   }
   foreach_packages <- if (surface == "C") {
     c("raster", "gdistance")
@@ -64,19 +75,19 @@ popmaps <- function(input_raster='', input_locs='', surface='G', empirical_pt_di
     "raster"
   }
 
-  cl<-parallel::makeCluster(ncore)
-	doParallel::registerDoParallel(cl)
-	on.exit({
-	  parallel::stopCluster(cl)
-	  doParallel::stopImplicitCluster()
-	}, add = TRUE)
+  if (ncore > 1) {
+    cl <- parallel::makeCluster(ncore)
+    doParallel::registerDoParallel(cl)
+    on.exit({
+      parallel::stopCluster(cl)
+      doParallel::stopImplicitCluster()
+    }, add = TRUE)
+  } else {
+    foreach::registerDoSEQ()
+  }
 	
-	if(is.character(input_raster) == F) {
-		raster_surface <- input_raster
-	} else {
-		raster_surface <- raster::raster(input_raster)
-	}
-	species_data <- input_locs
+	raster_surface <- prepared$raster
+	species_data <- prepared$locations
 	species_pts <- sp::SpatialPointsDataFrame(species_data[,2:3], species_data)
 	sampling_loc_coords <- cbind(species_pts@data$V2,species_pts@data$V3)
 	num_emp_sites <- length(sampling_loc_coords[,1])
