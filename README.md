@@ -49,10 +49,9 @@ Optional legacy functionality currently requires additional packages:
 
 - `gdistance` for least-cost distance surfaces with `surface = "C"`;
 - `gplots` for `jackknife_viz()`;
-- `viridis` for legacy plotting functions;
-- `rgeos` for legacy boundary buffering in `popmap_viz()`.
+- `viridis` for legacy plotting functions.
 
-`rgeos` has been retired from CRAN, so `popmap_viz()` is a priority target for replacement.
+`rgeos` has been retired from CRAN and is no longer a package dependency. The `popmap_viz()` boundary plotting path no longer applies the old buffered-boundary adjustment, and the full plotting stack remains a priority target for `terra`/`sf` replacement.
 
 ## Data Requirements
 

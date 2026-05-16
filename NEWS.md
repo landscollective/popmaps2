@@ -10,3 +10,4 @@
 - Added terra-first input preparation and validation for raster and location inputs.
 - Allowed descriptive location column names while preserving the legacy column-order contract.
 - Updated `anc_extract()` to use terra cell lookup and clearer coordinate validation.
+- Removed the retired `rgeos` package from metadata and updated `popmap_viz()` boundary drawing.
