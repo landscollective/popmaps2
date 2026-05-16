@@ -1,0 +1,59 @@
+Package: popmaps2
+Title: Estimate and Modernize Ancestry Probability Surfaces
+Version: 0.0.0.9000
+Authors@R: 
+    c(
+        person(given = "Rob",
+               family = "Massatti",
+               role = c("aut", "cre", "cph"),
+               email = "rob@landscollective.org",
+               comment = c(ORCID = "https://orcid.org/0000-0001-5854-5597")),
+        person(given = "Daniel E.",
+               family = "Winkler",
+               role = "ctb"),
+        person(given = "U.S. Geological Survey",
+               role = "cph",
+               comment = "Original POPMAPS 1.03 release")
+    )
+Author: Rob Massatti [aut, cre, cph],
+    Daniel E. Winkler [ctb],
+    U.S. Geological Survey [cph]
+Maintainer: Rob Massatti <rob@landscollective.org>
+Description: A maintained successor to POPMAPS for estimating ancestry
+    coefficients and ancestry probability surfaces from empirical genetic data
+    across user-defined geospatial layers. The current development version
+    preserves the POPMAPS 1.03 workflow while package infrastructure,
+    documentation, tests, and spatial-performance improvements are added.
+URL: https://github.com/landscollective/popmaps2
+BugReports: https://github.com/landscollective/popmaps2/issues
+License: CC0
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.0
+Imports:
+    doParallel,
+    foreach,
+    graphics,
+    grDevices,
+    gtools,
+    maps,
+    MASS,
+    methods,
+    parallel,
+    plotrix,
+    raster,
+    sp,
+    stats
+Depends: 
+    R (>= 4.1)
+Suggests:
+    gdistance,
+    gplots,
+    knitr,
+    rgeos,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    terra,
+    viridis
+Config/testthat/edition: 3

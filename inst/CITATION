@@ -1,0 +1,13 @@
+bibentry(
+  bibtype = "Article",
+  title = "Spatially explicit management of genetic diversity using ancestry probability surfaces",
+  author = c(
+    person("Rob", "Massatti"),
+    person("Daniel E.", "Winkler")
+  ),
+  journal = "Methods in Ecology and Evolution",
+  year = "2022",
+  volume = "13",
+  pages = "2668--2681",
+  doi = "10.1111/2041-210X.13902"
+)
