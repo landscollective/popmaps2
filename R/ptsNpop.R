@@ -28,11 +28,8 @@
 #' @export
 
 ptsNpop <- function(pop_raster_list='', input_locs='', input_raster='', sampling_pts='', crs="+init=epsg:5070") {
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
-  }
+  raster_surface <- popmaps_prepare_raster(input_raster)$raster
+  input_locs <- popmaps_prepare_locations(input_locs)
 
   cell_size <- raster::res(raster_surface)[1]
   nrows <- raster_surface@nrows

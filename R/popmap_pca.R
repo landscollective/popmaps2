@@ -20,11 +20,7 @@
 #' @export
 
 popmap_pca <- function(input_raster='', bio_dir='') {
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
-  }
+  raster_surface <- popmaps_prepare_raster(input_raster)$raster
   
   file_list <- list.files(path=bio_dir,recursive=F)
   num_files <- length(list.files(path=bio_dir,recursive=F))

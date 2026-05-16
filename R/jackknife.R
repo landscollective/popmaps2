@@ -45,18 +45,32 @@
 
 jackknife <- function(input_raster="", input_locs="", surface='G', empirical_pt_dist=5, num_sites=10, num_tested_vec=c(2,3,4,5,6,7,8), popmod_vec=c(-0.001,-0.01,-0.05,-0.1,-0.15),dist_prob_func=function(popmod_temp,distance) {exp(popmod_temp*distance)}) {
 
-  surface <- match.arg(surface, c("G", "C"))
-  if (surface == "C" && !requireNamespace("gdistance", quietly = TRUE)) {
-    stop("The 'gdistance' package is required when surface = 'C'.", call. = FALSE)
+  if (!is.numeric(num_tested_vec) || length(num_tested_vec) < 1 ||
+      any(!is.finite(num_tested_vec)) || any(num_tested_vec < 1) ||
+      any(num_tested_vec != floor(num_tested_vec))) {
+    stop("`num_tested_vec` must contain positive whole numbers.", call. = FALSE)
+  }
+  if (!is.numeric(popmod_vec) || length(popmod_vec) < 1 || any(!is.finite(popmod_vec))) {
+    stop("`popmod_vec` must contain finite numeric values.", call. = FALSE)
+  }
+  if (!is.function(dist_prob_func)) {
+    stop("`dist_prob_func` must be a function.", call. = FALSE)
   }
 
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
-  }
+  prepared <- popmaps_prepare_inputs(
+    input_raster = input_raster,
+    input_locs = input_locs,
+    surface = surface,
+    num_sites = num_sites,
+    num_tested = max(num_tested_vec),
+    empirical_pt_dist = empirical_pt_dist,
+    jackknife = TRUE
+  )
+  surface <- prepared$surface
+
+  raster_surface <- prepared$raster
 	cell_size <- raster::res(raster_surface)[1]
-	species_data <- input_locs
+	species_data <- prepared$locations
 	species_pts <- sp::SpatialPointsDataFrame(species_data[,2:3], species_data)
 	sampling_loc_coords <- cbind(species_pts@data$V2,species_pts@data$V3)
 	num_emp_sites <- length(sampling_loc_coords[,1])

@@ -60,7 +60,9 @@ The core functions expect three kinds of inputs.
 
 ### 1. Raster Surface
 
-`input_raster` defines the extent and resolution of the interpolation. It may be a `RasterLayer` object or a path readable by `raster::raster()`.
+`input_raster` defines the extent and resolution of the interpolation. It may be a `terra::SpatRaster`, a legacy `raster::RasterLayer`, or a path readable by `terra::rast()`.
+
+Internally, new input handling is `terra`-first. Some legacy modeling and plotting internals still convert to `raster` objects until those paths are fully modernized.
 
 Raster values are used differently depending on `surface`:
 
@@ -81,6 +83,8 @@ Use `threshold` to skip cells where ancestry coefficients should not be estimate
 | 4...n | Ancestry coefficients for each genetic axis or cluster |
 
 The embedded `hija_struc` dataset is the reference format.
+
+The original POPMAPS implementation expected columns named `V1`, `V2`, `V3`, and so on. `popmaps2` now normalizes valid input tables internally, so descriptive column names such as `site`, `lon`, `lat`, `axis1`, `axis2`, and `axis3` are accepted as long as the column order is correct.
 
 ### 3. Optional Sample Points
 

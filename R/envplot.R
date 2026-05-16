@@ -63,11 +63,7 @@ envplot <- function(bg_env='', pop_env='', pt_env=NULL, input_raster='', axis1=1
     stop("The 'viridis' package is required for envplot().", call. = FALSE)
   }
 
-  if(is.character(input_raster) == F) {
-    raster_surface <- input_raster
-  } else {
-    raster_surface <- raster::raster(input_raster)
-  }
+  raster_surface <- popmaps_prepare_raster(input_raster)$raster
   
   t_col <- function(color, percent = 50, name = NULL) {
     rgb.val <- col2rgb(color)
