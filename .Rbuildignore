@@ -1,0 +1,11 @@
+^\.github$
+^\.git$
+^\.gitignore$
+^README\.Rmd$
+^popmaps2\.Rproj$
+^ROADMAP\.md$
+^CONTRIBUTING\.md$
+^code\.json$
+^data-raw$
+^.*[.]Rcheck$
+^.*[.]tar[.]gz$

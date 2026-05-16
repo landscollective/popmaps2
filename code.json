@@ -1,0 +1,46 @@
+[
+  {
+    "name": "popmaps2",
+    "organization": "Lands Collective",
+    "description": "Maintained successor to POPMAPS for estimating ancestry probability surfaces from empirical genetic data",
+    "version": "0.0.0.9000",
+    "status": "Development",
+    "permissions": {
+      "usageType": "openSource",
+      "licenses": [
+        {
+          "name": "Public Domain, CC0-1.0",
+          "URL": "https://github.com/landscollective/popmaps2/blob/main/LICENSE.md"
+        }
+      ]
+    },
+    "homepageURL": "https://github.com/landscollective/popmaps2",
+    "repositoryURL": "https://github.com/landscollective/popmaps2.git",
+    "vcs": "git",
+    "tags": [
+      "population genetics",
+      "ancestry probability surfaces",
+      "conservation genetics",
+      "restoration genetics",
+      "seed transfer zones",
+      "spatial modeling",
+      "R"
+    ],
+    "languages": [
+      "R"
+    ],
+    "contact": {
+      "name": "Lands Collective",
+      "email": "rob@landscollective.org"
+    },
+    "date": {
+      "metadataLastUpdated": "2026-05-16"
+    },
+    "relatedCode": [
+      {
+        "name": "POPMAPS 1.03",
+        "URL": "https://code.usgs.gov/GWRC/popmaps"
+      }
+    ]
+  }
+]
