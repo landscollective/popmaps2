@@ -45,7 +45,8 @@ Imports:
     raster,
     sp,
     stats,
-    terra
+    terra,
+    utils
 Depends: 
     R (>= 4.1)
 Suggests:

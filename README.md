@@ -147,6 +147,14 @@ anc_extract(
 )
 ```
 
+Run the built-in POPMAPS 1.03 baseline validation:
+
+```r
+validate_popmaps_baseline()
+```
+
+This validation uses the bundled `Hilaria jamesii` example data, runs a small ancestry probability surface, and compares every output matrix to a frozen POPMAPS 1.03 reference result. It is intended to catch unintended scientific drift before deeper optimization work.
+
 ## Output Structure
 
 `popmaps()` currently returns a list that preserves the original POPMAPS structure:

@@ -11,3 +11,4 @@
 - Allowed descriptive location column names while preserving the legacy column-order contract.
 - Updated `anc_extract()` to use terra cell lookup and clearer coordinate validation.
 - Removed the retired `rgeos` package from metadata and updated `popmap_viz()` boundary drawing.
+- Added `validate_popmaps_baseline()` for repeatable comparison against a frozen POPMAPS 1.03 reference result.
