@@ -107,17 +107,27 @@ Aggregate the example raster to make the demonstration fast:
 ex_raster <- raster::aggregate(hija_raster, fact = 16)
 ```
 
-Use jackknifing to compare parameter combinations:
+Use `tune_popmaps()` to compare geographic-distance parameter combinations with
+leave-one-site-out validation:
 
 ```r
-jack_data <- jackknife(
+tuning <- tune_popmaps(
   input_raster = ex_raster,
   input_locs = hija_struc,
   surface = "G",
-  num_tested_vec = c(3, 4),
-  popmod_vec = c(-0.01, -0.05)
+  empirical_pt_dist = 5,
+  num_sites = c(10, 15),
+  num_tested = c(3, 4),
+  popmod = c(-0.01, -0.05)
 )
+
+tuning$best
 ```
+
+The returned object includes `tuning$results`, with one row per parameter
+combination, and `tuning$folds`, with one row per withheld sampling site. The
+legacy `jackknife()` function is still available for compatibility with
+`jackknife_viz()`.
 
 Estimate an ancestry probability surface:
 
@@ -186,6 +196,7 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | Function | Purpose |
 | --- | --- |
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
+| `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-site-out validation metrics. |
 | `jackknife()` | Test parameter combinations with a leave-one-out approach. |
 | `jackknife_viz()` | Visualize jackknife performance as heatmaps. |
 | `anc_extract()` | Extract estimated ancestry coefficients at a geographic coordinate. |
@@ -239,10 +250,11 @@ Completed:
 - vectorize geographic-distance calculations;
 - avoid repeated `raster::extract()` calls inside geographic-distance cell loops;
 - test optimized geographic outputs against POPMAPS 1.03 reference outputs.
+- add a fast geographic-distance tuning workflow that scores parameter combinations at withheld empirical sites.
 
 Planned improvements:
 
-- separate raster-cell selection from ancestry estimation;
+- extend `tune_popmaps()` to least-cost surfaces after the `surface = "C"` engine is modernized;
 - replace `gdistance` least-cost routines with a maintained alternative;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;
