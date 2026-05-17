@@ -12,15 +12,23 @@ test_that("tune_popmaps returns parameter summaries and fold diagnostics", {
   )
 
   expect_s3_class(tuning, "popmaps_tuning")
-  expect_named(tuning, c("results", "folds", "best", "primary_metric", "call"))
+  expect_named(tuning, c("results", "folds", "best", "primary_metric", "validation", "call"))
   expect_equal(nrow(tuning$results), 16)
   expect_equal(nrow(tuning$folds), 16 * nrow(hija_struc))
   expect_equal(nrow(tuning$best), 1)
+  expect_equal(tuning$validation, "loo")
   expect_true(all(tuning$results$n_scored == nrow(hija_struc)))
   expect_true(all(tuning$results$failed_folds == 0))
+  expect_true(all(tuning$results$n_validation_folds == nrow(hija_struc)))
+  expect_true(all(tuning$results$half_distance_km > 0))
+  expect_true(all(tuning$results$ten_pct_distance_km > tuning$results$half_distance_km))
   expect_true(all(is.finite(tuning$results$rmse)))
   expect_true(all(is.finite(tuning$folds$predicted_axis_1)))
   expect_true(all(is.finite(tuning$folds$observed_axis_1)))
+  expect_equal(
+    tuning$results$half_distance_km,
+    log(0.5) / tuning$results$popmod
+  )
 })
 
 test_that("tune_popmaps validates unsupported and impossible tuning requests", {
@@ -45,6 +53,64 @@ test_that("tune_popmaps validates unsupported and impossible tuning requests", {
       quiet = TRUE
     ),
     "num_tested <= num_sites"
+  )
+})
+
+test_that("tune_popmaps supports spatial-block validation", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  tuning <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    validation = "spatial_block",
+    n_blocks = 4,
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.01,
+    quiet = TRUE
+  )
+
+  expect_s3_class(tuning, "popmaps_tuning")
+  expect_equal(tuning$validation, "spatial_block")
+  expect_equal(nrow(tuning$results), 1)
+  expect_equal(nrow(tuning$folds), nrow(hija_struc))
+  expect_true(length(unique(tuning$folds$fold_id)) >= 2)
+  expect_true(all(tuning$folds$validation == "spatial_block"))
+  expect_true(all(is.finite(tuning$folds$n_training)))
+  expect_true(all(tuning$results$n_validation_folds >= 2))
+})
+
+test_that("tune_popmaps accepts supplied spatial block assignments", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+  blocks <- rep(c("west", "east"), length.out = nrow(hija_struc))
+
+  tuning <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    validation = "spatial_block",
+    block_assignments = blocks,
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.01,
+    quiet = TRUE
+  )
+
+  expect_equal(sort(unique(tuning$folds$block_id)), c("east", "west"))
+  expect_error(
+    tune_popmaps(
+      input_raster = ex_raster,
+      input_locs = hija_struc,
+      validation = "spatial_block",
+      block_assignments = blocks[-1],
+      empirical_pt_dist = 0,
+      num_sites = 5,
+      num_tested = 2,
+      popmod = -0.01,
+      quiet = TRUE
+    ),
+    "one value per empirical site"
   )
 })
 

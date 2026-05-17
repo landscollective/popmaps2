@@ -10,6 +10,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add user-facing raster conversion and GeoTIFF export helpers.
 - Add a modern parameter-tuning helper for geographic-distance leave-one-site-out validation.
 - Add data-adaptive tuning-grid suggestions and adaptive parameter-space search.
+- Add spatial-block validation and biologically interpretable distance-decay summaries for tuning.
 - Maintain private/local validation scripts for larger datasets that should not be committed.
 - Update examples so they run quickly and do not require retired packages.
 - Add a vignette that reproduces the published workflow at a reduced raster resolution.
