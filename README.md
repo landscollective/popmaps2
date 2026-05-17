@@ -147,6 +147,20 @@ anc_extract(
 )
 ```
 
+Convert the output to a `terra::SpatRaster` and write GeoTIFF layers:
+
+```r
+aps_raster <- popmaps_rast(aps, ex_raster)
+
+write_popmaps(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  dir = "outputs",
+  prefix = "hija",
+  overwrite = TRUE
+)
+```
+
 Run the built-in POPMAPS 1.03 baseline validation:
 
 ```r
@@ -176,10 +190,44 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | `jackknife_viz()` | Visualize jackknife performance as heatmaps. |
 | `anc_extract()` | Extract estimated ancestry coefficients at a geographic coordinate. |
 | `popmap_viz()` | Legacy visualization of ancestry probability surfaces. |
+| `popmaps_rast()` | Convert `popmaps()` list output to a named `terra::SpatRaster`. |
+| `write_popmaps()` | Write hard boundary, ancestry probability, and ancestry-axis layers as GeoTIFFs. |
 | `bg_pop_pts()` | Generate and partition random background points by inferred population. |
 | `ptsNpop()` | Assign provided sample points to inferred populations. |
 | `popmap_pca()` | Build environmental PCA rasters from environmental layers. |
 | `envplot()` | Visualize environmental space by inferred population. |
+
+## Larger Local Validation
+
+Real project datasets should generally stay outside the package repository unless they are cleared for redistribution. The ASLO validation workflow is therefore a local script that points at files on your machine and writes summaries to a temporary or user-specified output directory.
+
+Example:
+
+```sh
+R CMD INSTALL .
+
+Rscript tools/validate-aslo-local.R \
+  /path/to/aslo_avg.asc \
+  /path/to/aslo.txt \
+  /tmp/popmaps2-aslo-validation
+```
+
+By default the script writes:
+
+- `aslo-run-summary.csv`, with parameters and runtime;
+- `aslo-layer-summary.csv`, with dimensions, non-NA counts, and value ranges by output layer.
+
+Optional environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `POPMAPS_ASLO_AGGREGATE` | `1` | Aggregate the input raster before modeling. |
+| `POPMAPS_ASLO_NUM_SITES` | `15` | Set `num_sites`. |
+| `POPMAPS_ASLO_NUM_TESTED` | `4` | Set `num_tested`. |
+| `POPMAPS_ASLO_POPMOD` | `-0.05` | Set `popmod`. |
+| `POPMAPS_ASLO_THRESHOLD` | `0` | Set `threshold`. |
+| `POPMAPS_ASLO_WRITE_RASTERS` | `false` | Write GeoTIFF output layers under `rasters/`. |
+| `POPMAPS_ASLO_SAVE_RDS` | `false` | Save the full R result object for debugging. |
 
 ## Optimization Plan
 
