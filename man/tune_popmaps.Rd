@@ -2,7 +2,7 @@
 % Please edit documentation in R/tune_popmaps.R
 \name{tune_popmaps}
 \alias{tune_popmaps}
-\title{Tune POPMAPS parameters with leave-one-site-out validation}
+\title{Tune POPMAPS parameters with cross-validation}
 \usage{
 tune_popmaps(
   input_raster = "",
@@ -13,6 +13,9 @@ tune_popmaps(
   num_tested = c(2, 3, 4, 5, 6, 7, 8),
   popmod = c(-0.001, -0.01, -0.05, -0.1, -0.15),
   threshold = 0,
+  validation = c("loo", "spatial_block"),
+  n_blocks = 4,
+  block_assignments = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
     "dominant_probability"),
   dist_prob_func = function(popmod_temp, distance) {     exp(popmod_temp * distance) },
@@ -41,6 +44,16 @@ ancestry coefficients.}
 \item{threshold}{Numeric scalar. Raster values below this threshold are not
 scored.}
 
+\item{validation}{Cross-validation design. \code{"loo"} withholds one site at a
+time. \code{"spatial_block"} withholds spatially grouped sites, which is a
+stricter test of prediction into undersampled regions.}
+
+\item{n_blocks}{Target number of spatial blocks when
+\code{validation = "spatial_block"} and \code{block_assignments = NULL}.}
+
+\item{block_assignments}{Optional vector assigning each empirical site to a
+spatial block. If supplied, it must have one value per row in \code{input_locs}.}
+
 \item{primary_metric}{Metric used to select the best parameter combination.}
 
 \item{dist_prob_func}{Function defining the relationship between distance and
@@ -51,17 +64,17 @@ empirical-site contribution.}
 \value{
 A \code{popmaps_tuning} object with:
 \describe{
-  \item{results}{One row per parameter combination with average validation metrics.}
+  \item{results}{One row per parameter combination with average validation metrics and distance-decay summaries.}
   \item{folds}{One row per withheld site and parameter combination.}
   \item{best}{The best row from \code{results} according to \code{primary_metric}.}
 }
 }
 \description{
 \code{tune_popmaps()} compares POPMAPS parameter combinations by
-withholding each empirical sampling site, predicting its ancestry
-coefficients from the remaining sites, and summarizing prediction error.
-This is a faster, more structured geographic-distance alternative to the
-legacy \code{jackknife()} workflow.
+withholding empirical sampling sites, predicting ancestry coefficients from
+the remaining sites, and summarizing prediction error. This is a faster,
+more structured geographic-distance alternative to the legacy \code{jackknife()}
+workflow.
 }
 \examples{
 ex_raster <- raster::aggregate(hija_raster, fact = 64)

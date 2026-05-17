@@ -108,7 +108,7 @@ ex_raster <- raster::aggregate(hija_raster, fact = 16)
 ```
 
 Use `tune_popmaps()` to compare geographic-distance parameter combinations with
-leave-one-site-out validation:
+cross-validation:
 
 ```r
 grid <- suggest_tuning_grid(hija_struc)
@@ -127,8 +127,30 @@ tuning$best
 ```
 
 The returned object includes `tuning$results`, with one row per parameter
-combination, and `tuning$folds`, with one row per withheld sampling site. The
-legacy `jackknife()` function is still available for compatibility with
+combination, and `tuning$folds`, with one row per withheld sampling site. Results
+include `half_distance_km` and `ten_pct_distance_km`, which translate `popmod`
+into the distances where ancestry weights decay to 50% and 10% of their initial
+value.
+
+For a stricter test of whether parameters predict unsampled regions, use
+spatial-block validation:
+
+```r
+spatial_tuning <- tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  validation = "spatial_block",
+  n_blocks = 4,
+  empirical_pt_dist = grid$empirical_pt_dist,
+  num_sites = grid$num_sites,
+  num_tested = grid$num_tested,
+  popmod = grid$popmod
+)
+
+spatial_tuning$best
+```
+
+The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
 
 For larger candidate spaces, use `adaptive_tune_popmaps()` to sample parameter
@@ -213,7 +235,7 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | Function | Purpose |
 | --- | --- |
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
-| `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-site-out validation metrics. |
+| `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-out or spatial-block validation metrics. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `jackknife()` | Test parameter combinations with a leave-one-out approach. |
@@ -271,6 +293,7 @@ Completed:
 - test optimized geographic outputs against POPMAPS 1.03 reference outputs.
 - add a fast geographic-distance tuning workflow that scores parameter combinations at withheld empirical sites.
 - suggest data-adaptive tuning grids from empirical site distances and sample larger parameter spaces adaptively.
+- report biologically interpretable distance-decay scales and support spatial-block tuning validation.
 
 Planned improvements:
 

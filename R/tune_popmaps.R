@@ -1,10 +1,10 @@
-#' Tune POPMAPS parameters with leave-one-site-out validation
+#' Tune POPMAPS parameters with cross-validation
 #'
 #' @description `tune_popmaps()` compares POPMAPS parameter combinations by
-#'   withholding each empirical sampling site, predicting its ancestry
-#'   coefficients from the remaining sites, and summarizing prediction error.
-#'   This is a faster, more structured geographic-distance alternative to the
-#'   legacy `jackknife()` workflow.
+#'   withholding empirical sampling sites, predicting ancestry coefficients from
+#'   the remaining sites, and summarizing prediction error. This is a faster,
+#'   more structured geographic-distance alternative to the legacy `jackknife()`
+#'   workflow.
 #'
 #' @param input_raster A `terra::SpatRaster`, `raster::RasterLayer`, or path to
 #'   a raster file defining the interpolation surface.
@@ -19,6 +19,13 @@
 #' @param popmod Numeric vector. Distance-decay parameter values to evaluate.
 #' @param threshold Numeric scalar. Raster values below this threshold are not
 #'   scored.
+#' @param validation Cross-validation design. `"loo"` withholds one site at a
+#'   time. `"spatial_block"` withholds spatially grouped sites, which is a
+#'   stricter test of prediction into undersampled regions.
+#' @param n_blocks Target number of spatial blocks when
+#'   `validation = "spatial_block"` and `block_assignments = NULL`.
+#' @param block_assignments Optional vector assigning each empirical site to a
+#'   spatial block. If supplied, it must have one value per row in `input_locs`.
 #' @param primary_metric Metric used to select the best parameter combination.
 #' @param dist_prob_func Function defining the relationship between distance and
 #'   empirical-site contribution.
@@ -56,6 +63,9 @@ tune_popmaps <- function(input_raster = "",
                          num_tested = c(2, 3, 4, 5, 6, 7, 8),
                          popmod = c(-0.001, -0.01, -0.05, -0.1, -0.15),
                          threshold = 0,
+                         validation = c("loo", "spatial_block"),
+                         n_blocks = 4,
+                         block_assignments = NULL,
                          primary_metric = c("rmse", "mae", "hellinger",
                                             "dominant_accuracy",
                                             "dominant_probability"),
@@ -64,6 +74,7 @@ tune_popmaps <- function(input_raster = "",
                          },
                          quiet = TRUE) {
   surface <- match.arg(surface, c("G", "C"))
+  validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
 
   if (surface != "G") {
@@ -109,6 +120,9 @@ tune_popmaps <- function(input_raster = "",
     surface = surface,
     parameter_grid = parameter_grid,
     threshold = threshold,
+    validation = validation,
+    n_blocks = n_blocks,
+    block_assignments = block_assignments,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = quiet,
@@ -310,6 +324,9 @@ adaptive_tune_popmaps <- function(input_raster = "",
                                   method = c("latin_hypercube", "random"),
                                   seed = NULL,
                                   threshold = 0,
+                                  validation = c("loo", "spatial_block"),
+                                  n_blocks = 4,
+                                  block_assignments = NULL,
                                   primary_metric = c("rmse", "mae", "hellinger",
                                                      "dominant_accuracy",
                                                      "dominant_probability"),
@@ -319,6 +336,7 @@ adaptive_tune_popmaps <- function(input_raster = "",
                                   quiet = TRUE) {
   surface <- match.arg(surface, c("G", "C"))
   method <- match.arg(method)
+  validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
   if (surface != "G") {
     stop(
@@ -383,6 +401,9 @@ adaptive_tune_popmaps <- function(input_raster = "",
     surface = surface,
     parameter_grid = initial_grid,
     threshold = threshold,
+    validation = validation,
+    n_blocks = n_blocks,
+    block_assignments = block_assignments,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = TRUE,
@@ -425,6 +446,9 @@ adaptive_tune_popmaps <- function(input_raster = "",
     surface = surface,
     parameter_grid = parameter_grid,
     threshold = threshold,
+    validation = validation,
+    n_blocks = n_blocks,
+    block_assignments = block_assignments,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = quiet,
@@ -441,6 +465,9 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
                                          surface,
                                          parameter_grid,
                                          threshold,
+                                         validation,
+                                         n_blocks,
+                                         block_assignments,
                                          primary_metric,
                                          dist_prob_func,
                                          quiet,
@@ -462,6 +489,12 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
   coords <- as.matrix(locations[, 2:3, drop = FALSE])
   raster_values <- popmaps_extract_tuning_values(prepared$rast, coords)
   axis_count <- ncol(locations) - 3
+  validation_folds <- popmaps_make_validation_folds(
+    locations = locations,
+    validation = validation,
+    n_blocks = n_blocks,
+    block_assignments = block_assignments
+  )
 
   fold_rows <- vector("list", nrow(parameter_grid) * nrow(locations))
   fold_idx <- 1
@@ -469,27 +502,32 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
   for (combo_idx in seq_len(nrow(parameter_grid))) {
     combo <- parameter_grid[combo_idx, ]
 
-    for (site_idx in seq_len(nrow(locations))) {
-      prediction <- popmaps_predict_site_geographic(
-        site_idx = site_idx,
-        locations = locations,
-        raster_value = raster_values[site_idx],
-        threshold = threshold,
-        empirical_pt_dist = combo$empirical_pt_dist,
-        num_sites = combo$num_sites,
-        num_tested = combo$num_tested,
-        popmod = combo$popmod,
-        dist_prob_func = dist_prob_func
-      )
+    for (validation_fold in validation_folds) {
+      for (site_idx in validation_fold$assessment_idx) {
+        prediction <- popmaps_predict_site_geographic(
+          site_idx = site_idx,
+          training_idx = validation_fold$analysis_idx,
+          locations = locations,
+          raster_value = raster_values[site_idx],
+          threshold = threshold,
+          empirical_pt_dist = combo$empirical_pt_dist,
+          num_sites = combo$num_sites,
+          num_tested = combo$num_tested,
+          popmod = combo$popmod,
+          dist_prob_func = dist_prob_func
+        )
 
-      fold_rows[[fold_idx]] <- popmaps_tuning_fold_row(
-        combo = combo,
-        site_idx = site_idx,
-        site = as.character(locations$V1[site_idx]),
-        prediction = prediction,
-        axis_count = axis_count
-      )
-      fold_idx <- fold_idx + 1
+        fold_rows[[fold_idx]] <- popmaps_tuning_fold_row(
+          combo = combo,
+          validation = validation,
+          validation_fold = validation_fold,
+          site_idx = site_idx,
+          site = as.character(locations$V1[site_idx]),
+          prediction = prediction,
+          axis_count = axis_count
+        )
+        fold_idx <- fold_idx + 1
+      }
     }
   }
 
@@ -504,6 +542,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
     folds = folds,
     best = best,
     primary_metric = primary_metric,
+    validation = validation,
     call = call
   )
   if (!is.null(search)) {
@@ -516,8 +555,8 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
       "Evaluated ",
       nrow(results),
       " parameter combinations across ",
-      nrow(locations),
-      " leave-one-site-out folds."
+      length(validation_folds),
+      " validation folds."
     )
   }
 
@@ -527,6 +566,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
 print.popmaps_tuning <- function(x, ...) {
   cat("POPMAPS parameter tuning\n")
   cat("Primary metric: ", x$primary_metric, "\n", sep = "")
+  cat("Validation: ", x$validation, "\n", sep = "")
   cat("Combinations: ", nrow(x$results), "\n", sep = "")
   cat("Folds: ", nrow(x$folds), "\n\n", sep = "")
   cat("Best parameter combination:\n")
@@ -538,6 +578,7 @@ print.popmaps_adaptive_tuning <- function(x, ...) {
   cat("Adaptive POPMAPS parameter tuning\n")
   cat("Method: ", x$search$method, "\n", sep = "")
   cat("Primary metric: ", x$primary_metric, "\n", sep = "")
+  cat("Validation: ", x$validation, "\n", sep = "")
   cat("Combinations: ", nrow(x$results), "\n", sep = "")
   cat("Folds: ", nrow(x$folds), "\n\n", sep = "")
   cat("Best parameter combination:\n")
@@ -561,6 +602,83 @@ popmaps_default_num_sites <- function(n_training) {
   candidates <- unique(round(c(0.33, 0.50, 0.75, 1.00) * n_training))
   candidates <- sort(unique(c(min(5, n_training), candidates)))
   candidates[candidates >= 2 & candidates <= n_training]
+}
+
+popmaps_make_validation_folds <- function(locations,
+                                          validation,
+                                          n_blocks,
+                                          block_assignments = NULL) {
+  n_sites <- nrow(locations)
+
+  if (validation == "loo") {
+    return(lapply(seq_len(n_sites), function(site_idx) {
+      list(
+        fold_id = site_idx,
+        block_id = NA_character_,
+        assessment_idx = site_idx,
+        analysis_idx = setdiff(seq_len(n_sites), site_idx)
+      )
+    }))
+  }
+
+  if (validation != "spatial_block") {
+    stop("Unsupported validation mode.", call. = FALSE)
+  }
+
+  if (is.null(block_assignments)) {
+    popmaps_check_whole_count(n_blocks, "`n_blocks`", positive = TRUE)
+    if (n_blocks < 2) {
+      stop("`n_blocks` must be at least 2 for spatial-block validation.", call. = FALSE)
+    }
+    if (n_blocks > n_sites) {
+      stop("`n_blocks` cannot exceed the number of empirical sites.", call. = FALSE)
+    }
+    block_assignments <- popmaps_assign_spatial_blocks(locations, n_blocks)
+  } else {
+    if (length(block_assignments) != n_sites) {
+      stop("`block_assignments` must have one value per empirical site.", call. = FALSE)
+    }
+    if (any(is.na(block_assignments))) {
+      stop("`block_assignments` cannot contain missing values.", call. = FALSE)
+    }
+    block_assignments <- as.character(block_assignments)
+  }
+
+  block_ids <- unique(block_assignments)
+  if (length(block_ids) < 2) {
+    stop("Spatial-block validation requires at least two non-empty blocks.", call. = FALSE)
+  }
+
+  lapply(seq_along(block_ids), function(fold_idx) {
+    block_id <- block_ids[fold_idx]
+    assessment_idx <- which(block_assignments == block_id)
+
+    list(
+      fold_id = fold_idx,
+      block_id = block_id,
+      assessment_idx = assessment_idx,
+      analysis_idx = setdiff(seq_len(n_sites), assessment_idx)
+    )
+  })
+}
+
+popmaps_assign_spatial_blocks <- function(locations, n_blocks) {
+  n_x <- ceiling(sqrt(n_blocks))
+  n_y <- ceiling(n_blocks / n_x)
+
+  x_bin <- popmaps_rank_bins(locations$V2, n_x)
+  y_bin <- popmaps_rank_bins(locations$V3, n_y)
+  paste0("x", x_bin, "_y", y_bin)
+}
+
+popmaps_rank_bins <- function(values, n_bins) {
+  if (n_bins <= 1) {
+    return(rep(1L, length(values)))
+  }
+
+  ranks <- rank(values, ties.method = "first")
+  bins <- ceiling(ranks / length(values) * n_bins)
+  pmax(1L, pmin(n_bins, bins))
 }
 
 popmaps_check_whole_count <- function(x,
@@ -803,6 +921,15 @@ popmaps_order_tuning_results <- function(results, primary_metric) {
   )
 }
 
+popmaps_decay_distance <- function(popmod, retained_weight) {
+  distance <- rep(NA_real_, length(popmod))
+  no_decay <- popmod == 0
+  distance[no_decay] <- Inf
+  decay <- popmod < 0
+  distance[decay] <- log(retained_weight) / popmod[decay]
+  distance
+}
+
 popmaps_check_tuning_values <- function(x,
                                         label,
                                         whole_number = FALSE,
@@ -834,6 +961,7 @@ popmaps_extract_tuning_values <- function(rast, coords) {
 }
 
 popmaps_predict_site_geographic <- function(site_idx,
+                                            training_idx = NULL,
                                             locations,
                                             raster_value,
                                             threshold,
@@ -844,6 +972,9 @@ popmaps_predict_site_geographic <- function(site_idx,
                                             dist_prob_func) {
   axis_cols <- seq.int(4, ncol(locations))
   observed <- popmaps_normalize_probability(as.numeric(locations[site_idx, axis_cols]))
+  if (is.null(training_idx)) {
+    training_idx <- setdiff(seq_len(nrow(locations)), site_idx)
+  }
 
   if (any(is.na(observed))) {
     return(popmaps_failed_tuning_prediction(
@@ -863,8 +994,20 @@ popmaps_predict_site_geographic <- function(site_idx,
       message = "Withheld site raster value is below `threshold`."
     ))
   }
+  if (length(training_idx) < num_tested) {
+    return(popmaps_failed_tuning_prediction(
+      observed = observed,
+      message = "Validation fold has fewer training sites than `num_tested`."
+    ))
+  }
+  if (length(training_idx) < num_sites) {
+    return(popmaps_failed_tuning_prediction(
+      observed = observed,
+      message = "Validation fold has fewer training sites than `num_sites`."
+    ))
+  }
 
-  training <- locations[-site_idx, , drop = FALSE]
+  training <- locations[training_idx, , drop = FALSE]
   training_coords <- as.matrix(training[, 2:3, drop = FALSE])
   training_ancestry <- as.matrix(training[, axis_cols, drop = FALSE])
 
@@ -967,6 +1110,8 @@ popmaps_score_prediction <- function(predicted, observed) {
 }
 
 popmaps_tuning_fold_row <- function(combo,
+                                    validation,
+                                    validation_fold,
                                     site_idx,
                                     site,
                                     prediction,
@@ -977,11 +1122,17 @@ popmaps_tuning_fold_row <- function(combo,
   cbind(
     data.frame(
       combo_id = combo$combo_id,
+      validation = validation,
+      fold_id = validation_fold$fold_id,
+      block_id = validation_fold$block_id,
       site_index = site_idx,
       site = site,
+      n_training = length(validation_fold$analysis_idx),
       num_sites = combo$num_sites,
       num_tested = combo$num_tested,
       popmod = combo$popmod,
+      half_distance_km = popmaps_decay_distance(combo$popmod, 0.5),
+      ten_pct_distance_km = popmaps_decay_distance(combo$popmod, 0.1),
       empirical_pt_dist = combo$empirical_pt_dist,
       mae = prediction$metrics[["mae"]],
       rmse = prediction$metrics[["rmse"]],
@@ -1027,12 +1178,17 @@ popmaps_summarize_tuning_results <- function(folds) {
 
     data.frame(
       combo_id = combo_id,
+      validation = first$validation,
       num_sites = first$num_sites,
       num_tested = first$num_tested,
       popmod = first$popmod,
+      half_distance_km = first$half_distance_km,
+      ten_pct_distance_km = first$ten_pct_distance_km,
       empirical_pt_dist = first$empirical_pt_dist,
+      n_validation_folds = length(unique(folds$fold_id[idx])),
       n_folds = sum(idx),
       n_scored = sum(is.finite(folds$rmse[idx])),
+      n_training_min = min(folds$n_training[idx]),
       failed_folds = sum(!is.na(folds$message[idx]) & nzchar(folds$message[idx])),
       t(metrics),
       check.names = FALSE,

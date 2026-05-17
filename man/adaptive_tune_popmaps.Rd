@@ -17,6 +17,9 @@ adaptive_tune_popmaps(
   method = c("latin_hypercube", "random"),
   seed = NULL,
   threshold = 0,
+  validation = c("loo", "spatial_block"),
+  n_blocks = 4,
+  block_assignments = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
     "dominant_probability"),
   dist_prob_func = function(popmod_temp, distance) {     exp(popmod_temp * distance) },
@@ -56,6 +59,16 @@ each parameter range; \code{"random"} samples independently.}
 \item{threshold}{Numeric scalar. Raster values below this threshold are not
 scored.}
 
+\item{validation}{Cross-validation design. \code{"loo"} withholds one site at a
+time. \code{"spatial_block"} withholds spatially grouped sites, which is a
+stricter test of prediction into undersampled regions.}
+
+\item{n_blocks}{Target number of spatial blocks when
+\code{validation = "spatial_block"} and \code{block_assignments = NULL}.}
+
+\item{block_assignments}{Optional vector assigning each empirical site to a
+spatial block. If supplied, it must have one value per row in \code{input_locs}.}
+
 \item{primary_metric}{Metric used to select the best parameter combination.}
 
 \item{dist_prob_func}{Function defining the relationship between distance and
@@ -71,7 +84,7 @@ describing the sampled search.
 \description{
 \code{adaptive_tune_popmaps()} samples parameter combinations from a
 data-adaptive search space, evaluates them with the same leave-one-site-out
-scoring used by \code{tune_popmaps()}, then optionally refines sampling around
+or spatial-block scoring used by \code{tune_popmaps()}, then optionally refines sampling around
 the best-performing region.
 }
 \examples{
