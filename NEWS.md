@@ -16,3 +16,4 @@
 - Added `popmaps_rast()` and `write_popmaps()` to convert `popmaps()` output to `terra` rasters and export GeoTIFF layers.
 - Added `tools/validate-aslo-local.R` for private, larger-scale ASLO validation without committing raw project data.
 - Added `tune_popmaps()` for fast leave-one-site-out tuning of geographic-distance POPMAPS parameters with fold-level diagnostics and summary metrics.
+- Added vectorized `empirical_pt_dist` tuning plus `suggest_tuning_grid()` and `adaptive_tune_popmaps()` for data-adaptive parameter exploration.

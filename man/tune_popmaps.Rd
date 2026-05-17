@@ -28,8 +28,8 @@ longitude, latitude, and one or more ancestry coefficient columns.}
 
 \item{surface}{Character. Currently only \code{"G"} is supported.}
 
-\item{empirical_pt_dist}{Minimum geographic distance, in kilometers, required
-between empirical sites selected for a prediction.}
+\item{empirical_pt_dist}{Numeric vector. Minimum geographic distances, in
+kilometers, required between empirical sites selected for a prediction.}
 
 \item{num_sites}{Integer vector. Candidate pool sizes to evaluate.}
 

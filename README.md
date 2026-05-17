@@ -111,14 +111,16 @@ Use `tune_popmaps()` to compare geographic-distance parameter combinations with
 leave-one-site-out validation:
 
 ```r
+grid <- suggest_tuning_grid(hija_struc)
+
 tuning <- tune_popmaps(
   input_raster = ex_raster,
   input_locs = hija_struc,
   surface = "G",
-  empirical_pt_dist = 5,
-  num_sites = c(10, 15),
-  num_tested = c(3, 4),
-  popmod = c(-0.01, -0.05)
+  empirical_pt_dist = grid$empirical_pt_dist,
+  num_sites = grid$num_sites,
+  num_tested = grid$num_tested,
+  popmod = grid$popmod
 )
 
 tuning$best
@@ -128,6 +130,21 @@ The returned object includes `tuning$results`, with one row per parameter
 combination, and `tuning$folds`, with one row per withheld sampling site. The
 legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
+
+For larger candidate spaces, use `adaptive_tune_popmaps()` to sample parameter
+space and refine around the best-performing region:
+
+```r
+adaptive <- adaptive_tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  n_initial = 50,
+  n_refine = 50,
+  seed = 1
+)
+
+adaptive$best
+```
 
 Estimate an ancestry probability surface:
 
@@ -197,6 +214,8 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | --- | --- |
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
 | `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-site-out validation metrics. |
+| `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
+| `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `jackknife()` | Test parameter combinations with a leave-one-out approach. |
 | `jackknife_viz()` | Visualize jackknife performance as heatmaps. |
 | `anc_extract()` | Extract estimated ancestry coefficients at a geographic coordinate. |
@@ -251,6 +270,7 @@ Completed:
 - avoid repeated `raster::extract()` calls inside geographic-distance cell loops;
 - test optimized geographic outputs against POPMAPS 1.03 reference outputs.
 - add a fast geographic-distance tuning workflow that scores parameter combinations at withheld empirical sites.
+- suggest data-adaptive tuning grids from empirical site distances and sample larger parameter spaces adaptively.
 
 Planned improvements:
 
