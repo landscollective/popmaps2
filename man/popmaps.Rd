@@ -60,7 +60,8 @@ have the most influence on the shape of the curve. Modifying dist_prob_func will
 determine how to set popmod accordingly.}
 
 \item{ncore}{An integer allowing the user to specify how many cores on the local machine should be
-used to facilitate spatial interpolation.}
+used to facilitate legacy least-cost interpolation. The optimized geographic-distance path
+currently precomputes distances and runs sequentially.}
 
 \item{threshold}{A float (0.0-1.0) determined during species distribution modeling inference. If > 0,
 ancestry coefficients will not be estimated in raster cells with values < threshold, which saves

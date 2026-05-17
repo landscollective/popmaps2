@@ -27,7 +27,7 @@ This repository is not yet a polished public release. It is a development branch
 - adding tests before deeper algorithmic refactoring;
 - replacing slow or deprecated spatial code with modern `terra`/`sf`-based workflows.
 
-The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. Optimization is a central goal of `popmaps2`, but numerical equivalence to the original workflow will be tested before major changes are released.
+The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Least-cost modeling with `surface = "C"` still uses the legacy implementation and remains a priority for modernization.
 
 ## Installation
 
@@ -185,17 +185,21 @@ A future release will wrap this list in an S3 class with helper methods for prin
 
 The highest-priority performance work is in `popmaps()` and `jackknife()`.
 
-Planned improvements:
+Completed:
 
 - precompute empirical-site distance matrices instead of recalculating distances repeatedly;
 - vectorize geographic-distance calculations;
-- avoid repeated `raster::extract()` calls inside cell loops;
+- avoid repeated `raster::extract()` calls inside geographic-distance cell loops;
+- test optimized geographic outputs against POPMAPS 1.03 reference outputs.
+
+Planned improvements:
+
 - separate raster-cell selection from ancestry estimation;
 - replace `gdistance` least-cost routines with a maintained alternative;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;
 - benchmark legacy and optimized implementations on small, medium, and full-size rasters;
-- test optimized outputs against POPMAPS 1.03 reference outputs.
+- extend validation coverage with larger real-world datasets.
 
 ## Development Roadmap
 
@@ -217,7 +221,7 @@ Planned improvements:
 ### Phase 2: Performance Modernization
 
 - Profile `popmaps()` and `jackknife()`.
-- Implement a tested fast geographic-distance path.
+- Implement a tested fast geographic-distance path. `(initial surface = "G" engine complete)`
 - Implement a maintained least-cost path.
 - Add benchmark results to the documentation.
 
