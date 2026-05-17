@@ -35,7 +35,8 @@
 #'     computation time by avoiding estimating ancestry coefficients for cells in which the focal species 
 #'     would never be expected to occur.
 #' @param ncore An integer allowing the user to specify how many cores on the local machine should be 
-#'     used to facilitate spatial interpolation.
+#'     used to facilitate legacy least-cost interpolation. The optimized geographic-distance path
+#'     currently precomputes distances and runs sequentially.
 #' @param dist_prob_func A function defining the relationship between distance and the contribution 
 #'     of an empirical site’s ancestry coefficients to the estimation of ancestry coefficients at 
 #'     an inference cell. The default equation defines the relationship in Fig. 2 of Massatti & Winkler (2022).
@@ -75,6 +76,22 @@ popmaps <- function(input_raster='', input_locs='', surface='G', empirical_pt_di
     "raster"
   }
 
+	raster_surface <- prepared$raster
+	species_data <- prepared$locations
+
+  if (surface == "G") {
+    return(popmaps_geographic_surface(
+      raster_surface = raster_surface,
+      species_data = species_data,
+      empirical_pt_dist = empirical_pt_dist,
+      num_sites = num_sites,
+      num_tested = num_tested,
+      popmod = popmod,
+      threshold = threshold,
+      dist_prob_func = dist_prob_func
+    ))
+  }
+
   if (ncore > 1) {
     cl <- parallel::makeCluster(ncore)
     doParallel::registerDoParallel(cl)
@@ -86,8 +103,6 @@ popmaps <- function(input_raster='', input_locs='', surface='G', empirical_pt_di
     foreach::registerDoSEQ()
   }
 	
-	raster_surface <- prepared$raster
-	species_data <- prepared$locations
 	species_pts <- sp::SpatialPointsDataFrame(species_data[,2:3], species_data)
 	sampling_loc_coords <- cbind(species_pts@data$V2,species_pts@data$V3)
 	num_emp_sites <- length(sampling_loc_coords[,1])
