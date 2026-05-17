@@ -13,3 +13,5 @@
 - Removed the retired `rgeos` package from metadata and updated `popmap_viz()` boundary drawing.
 - Added `validate_popmaps_baseline()` for repeatable comparison against a frozen POPMAPS 1.03 reference result.
 - Added an optimized geographic-distance engine for `popmaps(surface = "G")` that precomputes cell-site and empirical-site distances while preserving POPMAPS 1.03 outputs on validation cases.
+- Added `popmaps_rast()` and `write_popmaps()` to convert `popmaps()` output to `terra` rasters and export GeoTIFF layers.
+- Added `tools/validate-aslo-local.R` for private, larger-scale ASLO validation without committing raw project data.
