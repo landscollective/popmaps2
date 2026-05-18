@@ -29,6 +29,25 @@ This repository is not yet a polished public release. It is a development branch
 
 The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Least-cost modeling with `surface = "C"` still uses the legacy implementation and remains a priority for modernization.
 
+## Relationship to Related Software
+
+`popmaps2` occupies a specific niche among spatial population-genetic tools. It is not intended to replace software that infers population structure, estimates migration surfaces, optimizes resistance surfaces, or visualizes admixture results. Instead, it is a downstream spatial decision-support tool: it takes empirical ancestry estimates and asks how those estimates should be interpolated across a landscape in a way that is biologically defensible, predictively validated, and honest about uncertainty.
+
+The closest conceptual neighbors include:
+
+| Software | Primary purpose | Relationship to `popmaps2` |
+| --- | --- | --- |
+| [POPMAPS](https://www.usgs.gov/software/popmaps-r-package-estimate-ancestry-probability-surfaces) | Estimate ancestry probability surfaces from empirical ancestry coefficients and raster surfaces. | Direct predecessor. `popmaps2` preserves the original workflow while adding modern package infrastructure, faster geographic interpolation, stronger validation, and clearer tuning outputs. |
+| [conStruct](https://rdrr.io/github/gbradburd/conStruct/) | Model continuous and discrete population genetic structure while accounting for spatial covariance. | Strong upstream population-structure model, but not primarily a rasterized ancestry-surface tool for management planning. |
+| [EEMS](https://github.com/dipetkov/eems), [FEEMS](https://github.com/NovembreLab/feems), and [reems](https://cran.r-universe.dev/reems) | Estimate effective migration surfaces and spatial variation in gene flow. | Biologically relevant for interpreting spatial genetic structure, but the output is migration or effective resistance rather than ancestry probability surfaces. |
+| [ResistanceGA](https://github.com/wpeterman/ResistanceGA) | Optimize landscape resistance surfaces against genetic distances. | Highly relevant to future `surface = "C"` work. `popmaps2` will compare geographic and cost/resistance surfaces for ancestry interpolation rather than optimizing resistance surfaces as the final product. |
+| [TESS3/tess3r](https://rdrr.io/github/bcm-uga/TESS3_encho_sen/man/tess3r.html), Geneland, LEA, ADMIXTURE-style tools | Infer ancestry coefficients, clusters, or spatial population structure. | Useful upstream sources of empirical ancestry estimates, but not designed to interpolate those estimates across user-defined management rasters. |
+| [mapmixture](https://www.rdocumentation.org/packages/mapmixture/versions/1.2.0) and [pophelper](https://www.royfrancis.com/pophelper/) | Visualize admixture or population-structure results. | Complementary visualization tools, not interpolation or tuning frameworks. |
+| [assignPOP](https://cran.r-universe.dev/assignPOP/doc/manual.html) | Population assignment and assignment accuracy with cross-validation. | Shares the validation mindset, but focuses on assigning individuals or populations rather than creating continuous ancestry probability surfaces. |
+| [adegenet/sPCA](https://rdrr.io/cran/adegenet/man/spca.html) | Exploratory spatial genetic analysis and spatial principal components. | Useful for detecting spatial genetic structure, but not a direct ancestry-surface interpolation workflow. |
+
+The goal of `popmaps2` is therefore to identify an interpolation model that best reflects the spatial genetic structure of a focal species, given available empirical ancestry data. This includes selecting the surface over which ancestry is interpolated, such as geographic distance (`surface = "G"`) or a landscape-resistance/cost surface (`surface = "C"`), and selecting parameters that control how empirical sampling locations contribute to predictions across space. The preferred model should minimize predictive error while avoiding false precision: if the empirical data do not support confident ancestry estimates in some areas, the resulting surfaces should show that uncertainty rather than hide it.
+
 ## Installation
 
 During private development, install from GitHub after authenticating with access to the repository:
