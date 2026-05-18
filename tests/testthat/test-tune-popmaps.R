@@ -156,6 +156,37 @@ test_that("adaptive_tune_popmaps samples and refines parameter space reproducibl
   expect_true(all(is.finite(tuning$results$rmse)))
 })
 
+test_that("diagnose_tuning summarizes tuning support", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  tuning <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    empirical_pt_dist = c(0, 5),
+    num_sites = c(5, 6),
+    num_tested = c(2, 3),
+    popmod = c(-0.01, -0.05),
+    quiet = TRUE
+  )
+  diagnostics <- diagnose_tuning(tuning)
+
+  expect_s3_class(diagnostics, "popmaps_tuning_diagnostics")
+  expect_named(diagnostics, c("overview", "near_best", "parameter_ranges", "parameter_effects"))
+  expect_equal(nrow(diagnostics$overview), 1)
+  expect_equal(diagnostics$overview$primary_metric, "rmse")
+  expect_equal(diagnostics$overview$metric_goal, "minimize")
+  expect_true(diagnostics$overview$n_near_best >= 1)
+  expect_true(tuning$best$combo_id %in% diagnostics$near_best$combo_id)
+  expect_true(all(c("num_sites", "num_tested", "popmod", "empirical_pt_dist") %in% diagnostics$parameter_ranges$parameter))
+  expect_true(all(c("parameter", "value", "mean_score", "loss_from_best", "rank") %in% names(diagnostics$parameter_effects)))
+  expect_true(all(diagnostics$parameter_effects$loss_from_best >= -sqrt(.Machine$double.eps), na.rm = TRUE))
+
+  expect_error(
+    diagnose_tuning(tuning, near_best_tolerance = -0.1),
+    "non-negative"
+  )
+})
+
 test_that("best-row selection prefers complete validation over partial low error", {
   results <- data.frame(
     combo_id = c(1, 2),

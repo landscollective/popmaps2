@@ -15,11 +15,12 @@ hija_raster
 A raster layer created from a species distribution model (asci file) for
 Hilaria jamesii (see Massatti & Winkler 2022).
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
    plot(hija_raster)
    points(as.matrix(hija_struc[,2:3]))
-}}
-
+}
+}
 \references{
 Massatti R & Knowles LL. (2020) The historical context of contemporary
 climatic adaptation: a case study in the climatically dynamic and environmentally complex

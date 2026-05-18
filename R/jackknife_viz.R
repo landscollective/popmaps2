@@ -18,9 +18,11 @@
 #'    ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples
+#' \dontrun{
 #'    ex_raster <- raster::aggregate(hija_raster,fact=16)   #Cells in embedded raster are aggregated to reduce computation time
 #'    jack_data <- jackknife(input_raster=ex_raster,input_locs=hija_struc,surface="G")
 #'    jackknife_viz(input_locs=hija_struc, jackknife_data=jack_data,axis=0)
+#' }
 #'
 #' @export
 

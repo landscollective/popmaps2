@@ -34,7 +34,8 @@ This function assigns points contained in a data frame to a genetically defined 
 estimated by the function popmaps(). It returns a list with as many elements as genetically defined populations;
 each element is a data frame containing the points that are assigned to one of the genetically defined populations.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
    ex_raster <- raster::aggregate(hija_raster,fact=16)   #Cells in embedded raster are aggregated to reduce computation time
    pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
    samp_per_pop <- ptsNpop(pop_raster_list=pp, input_locs=hija_struc, input_raster=ex_raster,sampling_pts=hija_herb)
@@ -42,8 +43,8 @@ each element is a data frame containing the points that are assigned to one of t
    points(samp_per_pop$pop1, pch=24, col= 'black', bg='red')
    points(samp_per_pop$pop2, pch=24, col= 'black', bg='blue')
    points(samp_per_pop$pop3, pch=24, col= 'black', bg='yellow')
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

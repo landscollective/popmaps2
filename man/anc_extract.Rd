@@ -33,12 +33,13 @@ estimated ancestry coefficients.}
 This function extracts the estimated ancestry coefficients of a specified
 geographic location from an object resulting from the function popmaps().
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
     anc_extract(pop_raster_list=pp, input_raster=ex_raster, input_locs=hija_struc, dec_lat=39.46522,dec_long=-110.9525)
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

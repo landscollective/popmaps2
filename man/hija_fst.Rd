@@ -16,7 +16,8 @@ hija_fst
 A data set consisting of Fst values between all pairs of Hilaria
 jamesii empirical sampling locations contained in hija_struc.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
    location <- as.matrix(hija_struc[,2:3])
    geoDist <- raster::pointDistance(location,longlat=T)
    geoDist <- as.dist(geoDist)
@@ -25,8 +26,8 @@ jamesii empirical sampling locations contained in hija_struc.
    costDist <- gdistance::costDistance(corrected_transC,location)
    cor(hija_fst,geoDist)
    cor(hija_fst,costDist) 
-}}
-
+}
+}
 \references{
 Massatti R & Knowles LL. (2020) The historical context of contemporary
 climatic adaptation: a case study in the climatically dynamic and environmentally complex

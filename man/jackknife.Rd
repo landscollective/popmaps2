@@ -14,8 +14,7 @@ jackknife(
   popmod_vec = c(-0.001, -0.01, -0.05, -0.1, -0.15),
   dist_prob_func = function(popmod_temp, distance) {
      exp(popmod_temp * distance)
-
-    }
+ }
 )
 }
 \arguments{
@@ -63,12 +62,13 @@ This function tests how parameter combinations (num_tested & popmod)
 influence the ability of the popmaps algorithm to estimate known values of
 ancestry coefficients using a leave-one-out approach.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
     jack_data <- jackknife(input_raster=ex_raster,input_locs=hija_struc,surface="G")
 
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

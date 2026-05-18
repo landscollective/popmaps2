@@ -48,6 +48,18 @@ The closest conceptual neighbors include:
 
 The goal of `popmaps2` is therefore to identify an interpolation model that best reflects the spatial genetic structure of a focal species, given available empirical ancestry data. This includes selecting the surface over which ancestry is interpolated, such as geographic distance (`surface = "G"`) or a landscape-resistance/cost surface (`surface = "C"`), and selecting parameters that control how empirical sampling locations contribute to predictions across space. The preferred model should minimize predictive error while avoiding false precision: if the empirical data do not support confident ancestry estimates in some areas, the resulting surfaces should show that uncertainty rather than hide it.
 
+## Model Selection Goal
+
+Parameter tuning is not meant to find universal defaults. The goal is to ask whether a species' empirical ancestry estimates are better predicted by local, broad, sparse, dense, weakly distance-decayed, or strongly distance-decayed interpolation behavior. That choice should be evaluated with withheld empirical sites, and ultimately with competing geographic (`surface = "G"`) and cost/resistance (`surface = "C"`) surfaces.
+
+A useful model is one that:
+
+- predicts withheld ancestry estimates better than alternative parameter combinations;
+- remains honest about poorly supported regions instead of creating false precision;
+- produces biologically interpretable distance-decay scales, such as the distances where site weights decay to 50% or 10%;
+- shows whether the best model is sharply supported or whether several parameter combinations perform similarly;
+- can later be compared across candidate surfaces so model choice reflects spatial genetic structure, dispersal, gene flow, and landscape resistance rather than convenience.
+
 ## Installation
 
 During private development, install from GitHub after authenticating with access to the repository:
@@ -150,6 +162,16 @@ combination, and `tuning$folds`, with one row per withheld sampling site. Result
 include `half_distance_km` and `ten_pct_distance_km`, which translate `popmod`
 into the distances where ancestry weights decay to 50% and 10% of their initial
 value.
+
+Use `diagnose_tuning()` to summarize whether the best combination is strongly
+supported or whether several combinations perform nearly as well:
+
+```r
+diagnostics <- diagnose_tuning(tuning)
+
+diagnostics$overview
+diagnostics$parameter_ranges
+```
 
 For a stricter test of whether parameters predict unsampled regions, use
 spatial-block validation:
@@ -255,6 +277,7 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | --- | --- |
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
 | `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-out or spatial-block validation metrics. |
+| `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `jackknife()` | Test parameter combinations with a leave-one-out approach. |
@@ -300,6 +323,19 @@ Optional environment variables:
 | `POPMAPS_ASLO_WRITE_RASTERS` | `false` | Write GeoTIFF output layers under `rasters/`. |
 | `POPMAPS_ASLO_SAVE_RDS` | `false` | Save the full R result object for debugging. |
 
+To rerun tuning validation across empirical examples kept outside the package,
+place `*_avg.asc` rasters and matching `*.txt` location files in a directory and
+run:
+
+```sh
+Rscript tools/validate-example-tuning.R ../popmaps_test_data
+```
+
+The script writes best-parameter summaries, near-best parameter support, and
+parameter-effect tables. By default it runs exhaustive grid tuning for both
+leave-one-site-out and spatial-block validation. Set
+`POPMAPS_EXAMPLE_SEARCH=adaptive` to use adaptive sampling instead.
+
 ## Optimization Plan
 
 The highest-priority performance work is in `popmaps()` and `jackknife()`.
@@ -313,11 +349,14 @@ Completed:
 - add a fast geographic-distance tuning workflow that scores parameter combinations at withheld empirical sites.
 - suggest data-adaptive tuning grids from empirical site distances and sample larger parameter spaces adaptively.
 - report biologically interpretable distance-decay scales and support spatial-block tuning validation.
+- summarize tuning strength, near-best parameter support, and parameter effects with `diagnose_tuning()`.
+- add a repeatable local empirical-example tuning validation script.
 
 Planned improvements:
 
 - extend `tune_popmaps()` to least-cost surfaces after the `surface = "C"` engine is modernized;
 - replace `gdistance` least-cost routines with a maintained alternative;
+- compare `surface = "G"` and `surface = "C"` with the same validation metrics and uncertainty diagnostics;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;
 - benchmark legacy and optimized implementations on small, medium, and full-size rasters;

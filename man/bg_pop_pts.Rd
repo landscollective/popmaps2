@@ -34,7 +34,8 @@ of exploring the environmental variation across a defined geographic extent. Ret
 a list with as many elements as genetically defined populations. Each element is a SpatialPoints
 object containing the random points that fall within one population as defined by popmaps().
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
     bg_pts <- bg_pop_pts(pop_raster_list = pp, input_locs = hija_struc, input_raster = ex_raster, bg_pts=1000)
@@ -42,8 +43,8 @@ object containing the random points that fall within one population as defined b
     points(bg_pts$bg1, col='red', pch=19)
     points(bg_pts$bg2, col='blue', pch=19)
     points(bg_pts$bg3, col='yellow', pch=19)
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

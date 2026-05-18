@@ -20,13 +20,14 @@ This function performs a principal components analysis on environmental variable
 extent of a popmaps() inference. The function crops environmental layers to the extent of the raster layer used in
 other popmaps analyses (i.e., input_raster).
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     #This function requires a pathway to a folder containing environmental data layers that are not included in the POPMAPS package.
     pca <- popmap_pca(input_raster=hija_raster, bio_dir='./wc2.1_30s_bio/')
     plot(pca$Comp.1, ext = hija_raster@extent) 
     points(hija_struc[,2:3],pch=19, col='black')
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

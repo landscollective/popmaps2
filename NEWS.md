@@ -18,3 +18,5 @@
 - Added `tune_popmaps()` for fast leave-one-site-out tuning of geographic-distance POPMAPS parameters with fold-level diagnostics and summary metrics.
 - Added vectorized `empirical_pt_dist` tuning plus `suggest_tuning_grid()` and `adaptive_tune_popmaps()` for data-adaptive parameter exploration.
 - Added `half_distance_km` and `ten_pct_distance_km` tuning summaries plus spatial-block validation for more biologically interpretable parameter selection.
+- Added `diagnose_tuning()` to summarize tuning strength, near-best parameter support, and parameter effects.
+- Added `tools/validate-example-tuning.R` for repeatable local tuning validation across empirical example datasets kept outside the package repository.

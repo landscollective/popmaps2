@@ -22,7 +22,9 @@ adaptive_tune_popmaps(
   block_assignments = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
     "dominant_probability"),
-  dist_prob_func = function(popmod_temp, distance) {     exp(popmod_temp * distance) },
+  dist_prob_func = function(popmod_temp, distance) {
+     exp(popmod_temp * distance)
+ },
   quiet = TRUE
 )
 }
@@ -84,7 +86,7 @@ describing the sampled search.
 \description{
 \code{adaptive_tune_popmaps()} samples parameter combinations from a
 data-adaptive search space, evaluates them with the same leave-one-site-out
-or spatial-block scoring used by \code{tune_popmaps()}, then optionally refines sampling around
+scoring used by \code{tune_popmaps()}, then optionally refines sampling around
 the best-performing region.
 }
 \examples{

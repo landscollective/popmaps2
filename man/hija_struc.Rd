@@ -16,12 +16,13 @@ hija_struc
 A data set containing location information and ancestry coefficients
 for Hilaria jamesii sampling locations.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
    ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
    pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
    popmap_viz(pop_raster_list=pp,input_locs=hija_struc,input_raster=ex_raster,maptype='ancestry',crs="+init=epsg:5070",boundary_width=-0.01)
-}}
-
+}
+}
 \references{
 Massatti R & Knowles LL. (2020) The historical context of contemporary
 climatic adaptation: a case study in the climatically dynamic and environmentally complex
