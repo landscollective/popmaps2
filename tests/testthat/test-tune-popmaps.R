@@ -19,6 +19,7 @@ test_that("tune_popmaps returns parameter summaries and fold diagnostics", {
   expect_equal(tuning$validation, "loo")
   expect_true(all(tuning$results$n_scored == nrow(hija_struc)))
   expect_true(all(tuning$results$failed_folds == 0))
+  expect_true(all(tuning$results$n_validation_repeats == 1))
   expect_true(all(tuning$results$n_validation_folds == nrow(hija_struc)))
   expect_true(all(tuning$results$half_distance_km > 0))
   expect_true(all(tuning$results$ten_pct_distance_km > tuning$results$half_distance_km))
@@ -78,7 +79,47 @@ test_that("tune_popmaps supports spatial-block validation", {
   expect_true(length(unique(tuning$folds$fold_id)) >= 2)
   expect_true(all(tuning$folds$validation == "spatial_block"))
   expect_true(all(is.finite(tuning$folds$n_training)))
+  expect_true(all(tuning$results$n_validation_repeats == 1))
   expect_true(all(tuning$results$n_validation_folds >= 2))
+})
+
+test_that("tune_popmaps supports repeated spatial-block validation", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  tuning <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    validation = "spatial_block",
+    n_blocks = 4,
+    spatial_block_repeats = 3,
+    spatial_block_seed = 99,
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.01,
+    quiet = TRUE
+  )
+  tuning_again <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    validation = "spatial_block",
+    n_blocks = 4,
+    spatial_block_repeats = 3,
+    spatial_block_seed = 99,
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.01,
+    quiet = TRUE
+  )
+
+  expect_equal(nrow(tuning$results), 1)
+  expect_equal(nrow(tuning$folds), 3 * nrow(hija_struc))
+  expect_equal(sort(unique(tuning$folds$repeat_id)), 1:3)
+  expect_equal(tuning$results$n_validation_repeats, 3)
+  expect_true(is.finite(tuning$results$rmse_repeat_sd))
+  expect_equal(tuning$folds$block_id, tuning_again$folds$block_id)
+  expect_equal(tuning$folds$rmse, tuning_again$folds$rmse)
 })
 
 test_that("tune_popmaps accepts supplied spatial block assignments", {
@@ -98,6 +139,21 @@ test_that("tune_popmaps accepts supplied spatial block assignments", {
   )
 
   expect_equal(sort(unique(tuning$folds$block_id)), c("east", "west"))
+  expect_error(
+    tune_popmaps(
+      input_raster = ex_raster,
+      input_locs = hija_struc,
+      validation = "spatial_block",
+      block_assignments = blocks,
+      spatial_block_repeats = 2,
+      empirical_pt_dist = 0,
+      num_sites = 5,
+      num_tested = 2,
+      popmod = -0.01,
+      quiet = TRUE
+    ),
+    "block_assignments = NULL"
+  )
   expect_error(
     tune_popmaps(
       input_raster = ex_raster,

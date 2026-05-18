@@ -117,6 +117,8 @@ if (!search %in% c("grid", "adaptive")) {
 validation_modes <- read_modes_env("POPMAPS_EXAMPLE_VALIDATION", "loo,spatial_block")
 aggregate_fact <- read_integer_env("POPMAPS_EXAMPLE_AGGREGATE", 1)
 n_blocks <- read_integer_env("POPMAPS_EXAMPLE_N_BLOCKS", 4)
+spatial_block_repeats <- read_integer_env("POPMAPS_EXAMPLE_BLOCK_REPEATS", 1)
+spatial_block_seed <- read_integer_env("POPMAPS_EXAMPLE_BLOCK_SEED", 1, allow_zero = TRUE)
 n_initial <- read_integer_env("POPMAPS_EXAMPLE_N_INITIAL", 50)
 n_refine <- read_integer_env("POPMAPS_EXAMPLE_N_REFINE", 50, allow_zero = TRUE)
 near_best_tolerance <- as.numeric(Sys.getenv("POPMAPS_EXAMPLE_NEAR_BEST_TOLERANCE", unset = "0.05"))
@@ -157,6 +159,8 @@ for (row_idx in seq_len(nrow(pairs))) {
         input_locs = locations,
         validation = validation,
         n_blocks = n_blocks,
+        spatial_block_repeats = if (validation == "spatial_block") spatial_block_repeats else 1,
+        spatial_block_seed = spatial_block_seed,
         n_initial = n_initial,
         n_refine = n_refine,
         seed = seed,
@@ -168,6 +172,8 @@ for (row_idx in seq_len(nrow(pairs))) {
         input_locs = locations,
         validation = validation,
         n_blocks = n_blocks,
+        spatial_block_repeats = if (validation == "spatial_block") spatial_block_repeats else 1,
+        spatial_block_seed = spatial_block_seed,
         empirical_pt_dist = grid$empirical_pt_dist,
         num_sites = grid$num_sites,
         num_tested = grid$num_tested,

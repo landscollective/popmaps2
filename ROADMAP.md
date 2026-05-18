@@ -12,6 +12,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add data-adaptive tuning-grid suggestions and adaptive parameter-space search.
 - Add spatial-block validation and biologically interpretable distance-decay summaries for tuning.
 - Add tuning diagnostics that distinguish strong parameter support from broad near-best support.
+- Add repeated spatial-block validation so parameter support can be evaluated across multiple spatial partitions.
 - Maintain private/local validation scripts for larger datasets that should not be committed.
 - Keep empirical example validation repeatable from local, uncommitted `*_avg.asc` and `*.txt` files.
 - Update examples so they run quickly and do not require retired packages.

@@ -80,6 +80,10 @@ plot_best_score <- function(summary, path) {
   offsets <- seq(-0.16, 0.16, length.out = length(validations))
   metric <- unique(summary$primary_metric)
   y_label <- if (length(metric) == 1) paste("Best", metric) else "Best score"
+  score_interval <- c(
+    summary$best_score - summary$best_score_repeat_sd,
+    summary$best_score + summary$best_score_repeat_sd
+  )
 
   png(path, width = 1400, height = 900, res = 150)
   on.exit(grDevices::dev.off(), add = TRUE)
@@ -87,7 +91,7 @@ plot_best_score <- function(summary, path) {
   graphics::plot(
     NA,
     xlim = c(0.5, length(species) + 0.5),
-    ylim = range(c(summary$best_score, summary$median_score), finite = TRUE),
+    ylim = range(c(summary$best_score, summary$median_score, score_interval), finite = TRUE),
     xaxt = "n",
     xlab = "",
     ylab = y_label,
@@ -100,6 +104,20 @@ plot_best_score <- function(summary, path) {
     x <- match(rows$species, species) + offsets[idx]
     graphics::points(x, rows$best_score, pch = 19, col = colors[[validation]], cex = 1.4)
     graphics::segments(x, rows$median_score, x, rows$best_score, col = grDevices::adjustcolor(colors[[validation]], alpha.f = 0.45))
+    has_sd <- is.finite(rows$best_score_repeat_sd)
+    if (any(has_sd)) {
+      graphics::arrows(
+        x[has_sd],
+        rows$best_score[has_sd] - rows$best_score_repeat_sd[has_sd],
+        x[has_sd],
+        rows$best_score[has_sd] + rows$best_score_repeat_sd[has_sd],
+        angle = 90,
+        code = 3,
+        length = 0.04,
+        col = colors[[validation]]
+      )
+      graphics::points(x[has_sd], rows$best_score[has_sd], pch = 19, col = colors[[validation]], cex = 1.4)
+    }
   }
   graphics::legend("topright", legend = validations, pch = 19, col = colors, bty = "n")
 }
@@ -112,6 +130,10 @@ plot_near_best <- function(summary, path) {
     rows <- summary[summary$validation == validation, , drop = FALSE]
     rows$near_best_fraction[match(species, rows$species)]
   }, numeric(length(species)))
+  if (is.null(dim(values))) {
+    values <- matrix(values, ncol = 1)
+    colnames(values) <- validations
+  }
   rownames(values) <- species
 
   png(path, width = 1400, height = 900, res = 150)
@@ -259,6 +281,14 @@ summary <- merge(
   suffixes = c("", "_overview")
 )
 summary$near_best_fraction <- summary$n_near_best / summary$n_evaluated
+summary$best_score_repeat_sd <- vapply(seq_len(nrow(summary)), function(row_idx) {
+  metric_sd_col <- paste0(summary$primary_metric[row_idx], "_repeat_sd")
+  if (metric_sd_col %in% names(summary)) {
+    summary[[metric_sd_col]][row_idx]
+  } else {
+    NA_real_
+  }
+}, numeric(1))
 summary$support <- support_label(summary$n_near_best, summary$near_best_fraction)
 summary$tuning_signal <- tuning_signal(summary$best_vs_median_percent, summary$support)
 summary <- summary[order(summary$validation, summary$species), , drop = FALSE]
@@ -295,6 +325,13 @@ plot_near_best(summary, file.path(figure_dir, "near-best-support.png"))
 plot_decay(summary, file.path(figure_dir, "distance-decay-scales.png"))
 plot_parameter_effects(parameter_effects, file.path(figure_dir, "parameter-effects.png"))
 
+summary_columns <- intersect(
+  c("species", "validation", "n_validation_repeats", "best_score",
+    "best_score_repeat_sd", "near_best_fraction", "support",
+    "tuning_signal", "num_sites", "num_tested", "popmod",
+    "half_distance_km", "ten_pct_distance_km", "empirical_pt_dist"),
+  names(summary)
+)
 report_path <- file.path(report_dir, "empirical-tuning-report.md")
 report <- c(
   "# Empirical Tuning Report",
@@ -309,12 +346,7 @@ report <- c(
   "",
   "## Species Summary",
   "",
-  markdown_table(
-    summary,
-    c("species", "validation", "best_score", "near_best_fraction", "support",
-      "tuning_signal", "num_sites", "num_tested", "popmod",
-      "half_distance_km", "ten_pct_distance_km", "empirical_pt_dist")
-  ),
+  markdown_table(summary, summary_columns),
   "",
   "## Parameter Diversity",
   "",
@@ -322,7 +354,7 @@ report <- c(
   "",
   "## Figures",
   "",
-  "- `figures/best-validation-score.png`: best validation score by species and validation design.",
+  "- `figures/best-validation-score.png`: best validation score by species and validation design. Error bars show repeat-level standard deviation when repeated spatial blocks are available.",
   "- `figures/near-best-support.png`: whether each species has sharp or broad near-best support.",
   "- `figures/distance-decay-scales.png`: best 50% and 10% distance-decay scales.",
   "- `figures/parameter-effects.png`: average loss from the best score across each tuning parameter.",
@@ -330,4 +362,9 @@ report <- c(
 )
 writeLines(report, report_path)
 message("Wrote ", report_path)
-print(summary[, c("species", "validation", "best_score", "near_best_fraction", "support", "tuning_signal")])
+print_columns <- intersect(
+  c("species", "validation", "n_validation_repeats", "best_score",
+    "best_score_repeat_sd", "near_best_fraction", "support", "tuning_signal"),
+  names(summary)
+)
+print(summary[, print_columns, drop = FALSE])
