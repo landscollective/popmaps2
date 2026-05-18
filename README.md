@@ -336,6 +336,16 @@ parameter-effect tables. By default it runs exhaustive grid tuning for both
 leave-one-site-out and spatial-block validation. Set
 `POPMAPS_EXAMPLE_SEARCH=adaptive` to use adaptive sampling instead.
 
+Summarize the latest empirical tuning run with:
+
+```sh
+Rscript tools/summarize-example-tuning.R ../popmaps_test_data/tuning_outputs
+```
+
+This creates a timestamped report directory with `empirical-tuning-report.md`,
+summary CSVs, and figures for best validation score, near-best support,
+distance-decay scales, and parameter effects.
+
 ## Optimization Plan
 
 The highest-priority performance work is in `popmaps()` and `jackknife()`.
