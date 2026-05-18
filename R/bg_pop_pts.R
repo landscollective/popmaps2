@@ -14,10 +14,11 @@
 #' @param bg_pts The number of background points to generate across the entire surface.
 #' @param crs A string defining a mapping projection. The default defines the Albers Equal Area 
 #'     Conic projection suitable for the contiguous United States.
-#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
+#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples
+#' \dontrun{
 #'     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
 #'     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
 #'     bg_pts <- bg_pop_pts(pop_raster_list = pp, input_locs = hija_struc, input_raster = ex_raster, bg_pts=1000)
@@ -25,6 +26,7 @@
 #'     points(bg_pts$bg1, col='red', pch=19)
 #'     points(bg_pts$bg2, col='blue', pch=19)
 #'     points(bg_pts$bg3, col='yellow', pch=19)
+#' }
 #' @export
 
 bg_pop_pts <- function(pop_raster_list='', input_locs='', input_raster='', bg_pts=1000, crs="+init=epsg:5070") {

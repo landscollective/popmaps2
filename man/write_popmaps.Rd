@@ -15,7 +15,7 @@ write_popmaps(
 )
 }
 \arguments{
-\item{pop_raster_list}{A list returned by \code{popmaps()}.}
+\item{pop_raster_list}{A list returned by \code{\link[=popmaps]{popmaps()}}.}
 
 \item{input_raster}{The raster used to create \code{pop_raster_list}.}
 
@@ -43,4 +43,5 @@ written file paths.
 \dontrun{
 paths <- write_popmaps(aps, ex_raster, dir = "outputs", prefix = "hija")
 }
+
 }

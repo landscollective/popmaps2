@@ -51,7 +51,8 @@ populations using ptsNpop(). Finally, a principal components analysis (PCA) perf
 variation across user-supplied environmental layers. After extracting PC data for the background and focal points, data can be
 visualized in PC space or as box plots. Data may be visualized for any pair of PC axes resulting from the PCA.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
     bg_pts <- bg_pop_pts(pop_raster_list = pp, input_locs = hija_struc, input_raster = hija_raster, bg_pts=2000)
@@ -75,8 +76,8 @@ visualized in PC space or as box plots. Data may be visualized for any pair of P
     
     envplot(bg_env=bg_env,pop_env=pop_env,input_raster=hija_raster,plot_type='env')
     
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

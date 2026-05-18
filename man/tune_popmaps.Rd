@@ -18,7 +18,9 @@ tune_popmaps(
   block_assignments = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
     "dominant_probability"),
-  dist_prob_func = function(popmod_temp, distance) {     exp(popmod_temp * distance) },
+  dist_prob_func = function(popmod_temp, distance) {
+     exp(popmod_temp * distance)
+ },
   quiet = TRUE
 )
 }
@@ -64,9 +66,9 @@ empirical-site contribution.}
 \value{
 A \code{popmaps_tuning} object with:
 \describe{
-  \item{results}{One row per parameter combination with average validation metrics and distance-decay summaries.}
-  \item{folds}{One row per withheld site and parameter combination.}
-  \item{best}{The best row from \code{results} according to \code{primary_metric}.}
+\item{results}{One row per parameter combination with average validation metrics.}
+\item{folds}{One row per withheld site and parameter combination.}
+\item{best}{The best row from \code{results} according to \code{primary_metric}.}
 }
 }
 \description{

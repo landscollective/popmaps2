@@ -460,6 +460,206 @@ adaptive_tune_popmaps <- function(input_raster = "",
   tuning
 }
 
+#' Diagnose a POPMAPS tuning result
+#'
+#' @description `diagnose_tuning()` summarizes whether parameter tuning found a
+#'   clearly supported parameter combination or a broad set of similarly
+#'   performing alternatives. It is intended to help users interpret tuning
+#'   output biologically instead of choosing a row from `tuning$results` by eye.
+#'
+#' @param tuning A `popmaps_tuning` or `popmaps_adaptive_tuning` object returned
+#'   by `tune_popmaps()` or `adaptive_tune_popmaps()`.
+#' @param primary_metric Metric used to rank parameter combinations. Defaults to
+#'   the metric stored in `tuning`.
+#' @param near_best_tolerance Non-negative relative tolerance used to define
+#'   near-best parameter combinations. The default, `0.05`, keeps combinations
+#'   within 5% of the best score for the primary metric.
+#' @param complete_only Logical. If `TRUE`, diagnose only parameter combinations
+#'   with no failed validation folds.
+#'
+#' @return A `popmaps_tuning_diagnostics` list with:
+#' \describe{
+#'   \item{overview}{One-row summary of tuning strength and near-best support.}
+#'   \item{near_best}{Parameter combinations within `near_best_tolerance` of the best score.}
+#'   \item{parameter_ranges}{Near-best and full-grid support for each tuning parameter.}
+#'   \item{parameter_effects}{Average score by parameter value.}
+#' }
+#'
+#' @examples
+#' ex_raster <- raster::aggregate(hija_raster, fact = 240)
+#' tuning <- tune_popmaps(
+#'   input_raster = ex_raster,
+#'   input_locs = hija_struc,
+#'   empirical_pt_dist = c(0, 5),
+#'   num_sites = c(5, 6),
+#'   num_tested = c(2, 3),
+#'   popmod = c(-0.01, -0.05),
+#'   quiet = TRUE
+#' )
+#' diagnose_tuning(tuning)
+#'
+#' @export
+diagnose_tuning <- function(tuning,
+                            primary_metric = tuning$primary_metric,
+                            near_best_tolerance = 0.05,
+                            complete_only = TRUE) {
+  if (!is.list(tuning) || is.null(tuning$results)) {
+    stop("`tuning` must be a tuning object returned by `tune_popmaps()`.", call. = FALSE)
+  }
+  if (!is.character(primary_metric) || length(primary_metric) != 1) {
+    stop("`primary_metric` must be one metric name.", call. = FALSE)
+  }
+  popmaps_check_finite_scalar(near_best_tolerance, "`near_best_tolerance`")
+  if (near_best_tolerance < 0) {
+    stop("`near_best_tolerance` must be non-negative.", call. = FALSE)
+  }
+  if (!is.logical(complete_only) || length(complete_only) != 1 || is.na(complete_only)) {
+    stop("`complete_only` must be `TRUE` or `FALSE`.", call. = FALSE)
+  }
+
+  results <- tuning$results
+  if (!primary_metric %in% names(results)) {
+    stop("`primary_metric` must be a column in `tuning$results`.", call. = FALSE)
+  }
+
+  if (isTRUE(complete_only) && all(c("failed_folds", "n_scored") %in% names(results))) {
+    results <- results[results$failed_folds == 0 & results$n_scored > 0, , drop = FALSE]
+  }
+  if (nrow(results) < 1) {
+    stop("No complete tuning results are available to diagnose.", call. = FALSE)
+  }
+
+  metric_values <- results[[primary_metric]]
+  scored <- is.finite(metric_values)
+  if (!any(scored)) {
+    stop("No finite values are available for `primary_metric`.", call. = FALSE)
+  }
+
+  maximize <- popmaps_metric_is_maximized(primary_metric)
+  best <- popmaps_tuning_best_row(results, primary_metric)
+  best_score <- best[[primary_metric]][1]
+  metric_scale <- max(abs(best_score), .Machine$double.eps)
+  near_best <- if (maximize) {
+    scored & metric_values >= best_score - near_best_tolerance * metric_scale
+  } else {
+    scored & metric_values <= best_score + near_best_tolerance * metric_scale
+  }
+  near_best_results <- results[near_best, , drop = FALSE]
+  near_best_results <- near_best_results[
+    popmaps_order_tuning_results(near_best_results, primary_metric),
+    ,
+    drop = FALSE
+  ]
+
+  median_score <- stats::median(metric_values[scored])
+  worst_score <- if (maximize) min(metric_values[scored]) else max(metric_values[scored])
+  best_vs_median_delta <- if (maximize) best_score - median_score else median_score - best_score
+  best_vs_worst_delta <- if (maximize) best_score - worst_score else worst_score - best_score
+
+  overview <- data.frame(
+    validation = if (!is.null(tuning$validation)) tuning$validation else paste(unique(results$validation), collapse = ", "),
+    primary_metric = primary_metric,
+    metric_goal = if (maximize) "maximize" else "minimize",
+    n_combinations = nrow(tuning$results),
+    n_evaluated = nrow(results),
+    n_complete = if ("failed_folds" %in% names(results)) sum(results$failed_folds == 0) else NA_integer_,
+    best_score = best_score,
+    median_score = median_score,
+    worst_score = worst_score,
+    best_vs_median_delta = best_vs_median_delta,
+    best_vs_median_percent = popmaps_percent_change(best_vs_median_delta, median_score),
+    best_vs_worst_delta = best_vs_worst_delta,
+    best_vs_worst_percent = popmaps_percent_change(best_vs_worst_delta, worst_score),
+    near_best_tolerance = near_best_tolerance,
+    n_near_best = nrow(near_best_results),
+    stringsAsFactors = FALSE
+  )
+
+  tuning_parameters <- intersect(
+    c("num_sites", "num_tested", "popmod", "half_distance_km",
+      "ten_pct_distance_km", "empirical_pt_dist"),
+    names(results)
+  )
+
+  parameter_ranges <- do.call(rbind, lapply(tuning_parameters, function(parameter) {
+    full_values <- results[[parameter]]
+    near_values <- near_best_results[[parameter]]
+
+    data.frame(
+      parameter = parameter,
+      best_value = best[[parameter]][1],
+      near_best_min = min(near_values, na.rm = TRUE),
+      near_best_max = max(near_values, na.rm = TRUE),
+      near_best_unique = paste(signif(sort(unique(near_values)), 5), collapse = ", "),
+      full_min = min(full_values, na.rm = TRUE),
+      full_max = max(full_values, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }))
+  rownames(parameter_ranges) <- NULL
+
+  effect_parameters <- intersect(
+    c("num_sites", "num_tested", "popmod", "empirical_pt_dist"),
+    names(results)
+  )
+  parameter_effects <- do.call(rbind, lapply(effect_parameters, function(parameter) {
+    values <- sort(unique(results[[parameter]]))
+    rows <- lapply(values, function(value) {
+      idx <- results[[parameter]] == value
+      scores <- results[[primary_metric]][idx]
+      finite_scores <- scores[is.finite(scores)]
+      mean_score <- mean(scores, na.rm = TRUE)
+      if (is.nan(mean_score)) {
+        mean_score <- NA_real_
+      }
+      score_sd <- if (length(finite_scores) > 1) stats::sd(finite_scores) else NA_real_
+
+      data.frame(
+        parameter = parameter,
+        value = value,
+        n_combinations = sum(idx),
+        n_scored = sum(is.finite(scores)),
+        mean_score = mean_score,
+        score_sd = score_sd,
+        loss_from_best = if (maximize) best_score - mean_score else mean_score - best_score,
+        is_best_value = value == best[[parameter]][1],
+        stringsAsFactors = FALSE
+      )
+    })
+    parameter_rows <- do.call(rbind, rows)
+    parameter_rows <- parameter_rows[
+      order(if (maximize) -parameter_rows$mean_score else parameter_rows$mean_score),
+      ,
+      drop = FALSE
+    ]
+    parameter_rows$rank <- seq_len(nrow(parameter_rows))
+    parameter_rows
+  }))
+  rownames(parameter_effects) <- NULL
+
+  diagnostics <- list(
+    overview = overview,
+    near_best = near_best_results,
+    parameter_ranges = parameter_ranges,
+    parameter_effects = parameter_effects
+  )
+  class(diagnostics) <- "popmaps_tuning_diagnostics"
+  diagnostics
+}
+
+#' @export
+print.popmaps_tuning_diagnostics <- function(x, ...) {
+  cat("POPMAPS tuning diagnostics\n")
+  cat("Primary metric: ", x$overview$primary_metric, " (", x$overview$metric_goal, ")\n", sep = "")
+  cat("Validation: ", x$overview$validation, "\n", sep = "")
+  cat("Near-best combinations: ", x$overview$n_near_best, "\n\n", sep = "")
+  cat("Overview:\n")
+  print(x$overview, row.names = FALSE)
+  cat("\nNear-best parameter support:\n")
+  print(x$parameter_ranges, row.names = FALSE)
+  invisible(x)
+}
+
 popmaps_evaluate_tuning_grid <- function(input_raster,
                                          input_locs,
                                          surface,
@@ -563,6 +763,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
   tuning
 }
 
+#' @export
 print.popmaps_tuning <- function(x, ...) {
   cat("POPMAPS parameter tuning\n")
   cat("Primary metric: ", x$primary_metric, "\n", sep = "")
@@ -574,6 +775,7 @@ print.popmaps_tuning <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
 print.popmaps_adaptive_tuning <- function(x, ...) {
   cat("Adaptive POPMAPS parameter tuning\n")
   cat("Method: ", x$search$method, "\n", sep = "")
@@ -586,6 +788,7 @@ print.popmaps_adaptive_tuning <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
 print.popmaps_tuning_grid <- function(x, ...) {
   cat("Suggested POPMAPS tuning grid\n")
   cat("Reference distance: ", round(x$reference_distance, 3), " km (", x$distance_reference, ")\n", sep = "")
@@ -904,8 +1107,20 @@ popmaps_refine_numeric_values <- function(top_values, full_values, lower_bound =
   refined
 }
 
+popmaps_metric_is_maximized <- function(primary_metric) {
+  primary_metric %in% c("dominant_accuracy", "dominant_probability")
+}
+
+popmaps_percent_change <- function(delta, reference) {
+  if (!is.finite(delta) || !is.finite(reference) || abs(reference) < .Machine$double.eps) {
+    return(NA_real_)
+  }
+
+  100 * delta / abs(reference)
+}
+
 popmaps_order_tuning_results <- function(results, primary_metric) {
-  maximize <- primary_metric %in% c("dominant_accuracy", "dominant_probability")
+  maximize <- popmaps_metric_is_maximized(primary_metric)
   metric_values <- results[[primary_metric]]
   order_values <- if (maximize) -metric_values else metric_values
   order_values[!is.finite(order_values)] <- Inf

@@ -14,6 +14,7 @@
 #'@seealso hija_struc, hija_raster
 #'
 #'@examples 
+#'\dontrun{
 #'    location <- as.matrix(hija_struc[,2:3])
 #'    geoDist <- raster::pointDistance(location,longlat=T)
 #'    geoDist <- as.dist(geoDist)
@@ -22,6 +23,7 @@
 #'    costDist <- gdistance::costDistance(corrected_transC,location)
 #'    cor(hija_fst,geoDist)
 #'    cor(hija_fst,costDist) 
+#'}
 "hija_fst"
 #'
 #'@title Hilaria jamesii empirical genetic data
@@ -40,9 +42,11 @@
 #'@seealso hija_fst, hija_raster
 #'
 #'@examples 
+#'\dontrun{
 #'    ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
 #'    pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
 #'    popmap_viz(pop_raster_list=pp,input_locs=hija_struc,input_raster=ex_raster,maptype='ancestry',crs="+init=epsg:5070",boundary_width=-0.01)
+#'}
 "hija_struc"
 #'
 #'@title Geospatial layer for ancestry probability surface estimation
@@ -63,8 +67,10 @@
 #'@seealso hija_struc
 #'
 #'@examples 
+#'\dontrun{
 #'    plot(hija_raster)
 #'    points(as.matrix(hija_struc[,2:3]))
+#'}
 "hija_raster"
 #'
 #'@title Locations of herbarium specimens for Hilaria jamesii.
@@ -82,7 +88,8 @@
 #'@seealso hija_struc
 #'
 #'@examples 
+#'\dontrun{
 #'    plot(hija_raster)
 #'    points(hija_herb, pch=24, col= 'black', bg='red')
+#'}
 "hija_herb"
-

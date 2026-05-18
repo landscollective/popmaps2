@@ -11,7 +11,9 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add a modern parameter-tuning helper for geographic-distance leave-one-site-out validation.
 - Add data-adaptive tuning-grid suggestions and adaptive parameter-space search.
 - Add spatial-block validation and biologically interpretable distance-decay summaries for tuning.
+- Add tuning diagnostics that distinguish strong parameter support from broad near-best support.
 - Maintain private/local validation scripts for larger datasets that should not be committed.
+- Keep empirical example validation repeatable from local, uncommitted `*_avg.asc` and `*.txt` files.
 - Update examples so they run quickly and do not require retired packages.
 - Add a vignette that reproduces the published workflow at a reduced raster resolution.
 - Profile `popmaps()` and `jackknife()` on representative rasters.
@@ -23,6 +25,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Reduce repeated raster extraction inside nested loops.
 - Add a single-cell or small-grid internal estimator that can be unit tested.
 - Extend parameter tuning to modernized least-cost surfaces.
+- Evaluate `surface = "G"` and `surface = "C"` with matched validation folds, metrics, and uncertainty summaries.
 - Benchmark serial and parallel execution.
 - Compare optimized results to the baseline using tolerances documented in tests.
 

@@ -34,13 +34,15 @@
 #' @param dist_prob_func A function defining the relationship between distance and the contribution 
 #'     of an empirical site’s ancestry coefficients to the estimation of ancestry coefficients at 
 #'     an inference cell. The default equation defines the relationship in Fig. 2 of Massatti & Winkler (2022).
-#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
+#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples 
+#' \dontrun{
 #'     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
 #'     jack_data <- jackknife(input_raster=ex_raster,input_locs=hija_struc,surface="G")
-#'
+#' 
+#' }
 #' @export
 
 jackknife <- function(input_raster="", input_locs="", surface='G', empirical_pt_dist=5, num_sites=10, num_tested_vec=c(2,3,4,5,6,7,8), popmod_vec=c(-0.001,-0.01,-0.05,-0.1,-0.15),dist_prob_func=function(popmod_temp,distance) {exp(popmod_temp*distance)}) {

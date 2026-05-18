@@ -13,10 +13,12 @@
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples
+#' \dontrun{
 #'     #This function requires a pathway to a folder containing environmental data layers that are not included in the POPMAPS package.
 #'     pca <- popmap_pca(input_raster=hija_raster, bio_dir='./wc2.1_30s_bio/')
 #'     plot(pca$Comp.1, ext = hija_raster@extent) 
 #'     points(hija_struc[,2:3],pch=19, col='black')
+#' }
 #' @export
 
 popmap_pca <- function(input_raster='', bio_dir='') {

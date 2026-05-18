@@ -27,10 +27,11 @@
 #'     smaller and partially transparent. Focal points are larger and have contour lines that represent the density of points in environmental space. 
 #'     If 'box', the output will contain multiple boxplots showing the range of environmental variation for the focal points according to the 
 #'     genetically defined populations, as well as axis1 and axis2. 
-#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
+#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples
+#' \dontrun{
 #'     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
 #'     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
 #'     bg_pts <- bg_pop_pts(pop_raster_list = pp, input_locs = hija_struc, input_raster = hija_raster, bg_pts=2000)
@@ -54,6 +55,7 @@
 #'     
 #'     envplot(bg_env=bg_env,pop_env=pop_env,input_raster=hija_raster,plot_type='env')
 #'     
+#' }
 #' @export
 
 envplot <- function(bg_env='', pop_env='', pt_env=NULL, input_raster='', axis1=1, axis2=2, plot_type=c('env','box')) {

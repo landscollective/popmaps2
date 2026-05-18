@@ -32,9 +32,8 @@ draw the hard boundaries and ancestry probability surface.}
 \item{pie_radius}{A float modifying the size of the pie charts depicting empirical ancestry
 coefficients drawn on top of the probability surface (see Fig. 3 in Massatti & Winkler 2022).}
 
-\item{boundary_width}{A float modifying the hard boundaries drawn on top of a probability surface.
-The scale of the analysis may require this variable to be modified so that adjacent hard
-boundaries touch one another (see Fig. 3 in Massatti & Winkler 2022).}
+\item{boundary_width}{Retained for compatibility with POPMAPS 1.03. Boundary buffering
+previously depended on retired spatial packages and is no longer applied.}
 
 \item{crs}{A string defining a mapping projection. The default defines the Albers Equal Area
 Conic projection suitable for the contiguous United States.}
@@ -45,12 +44,13 @@ can be drawn with hard boundaries only or with hard boundaries plus estimations
 of ancestry probabilities (see maptype). Pie charts representing genetic patterns
 at empirical sampling sites are drawn in all maps.
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
     ex_raster <- raster::aggregate(hija_raster,fact=16)  #Cells in embedded raster are aggregated to reduce computation time
     pp <- popmaps(input_raster=ex_raster,input_locs=hija_struc,empirical_pt_dist=5,num_sites=15,num_tested=4,popmod=-0.05,threshold=0,surface='G')
     popmap_viz(pop_raster_list=pp,input_locs=hija_struc,input_raster=ex_raster,maptype='ancestry',crs="+init=epsg:5070",boundary_width=-0.01)
-}}
-
+}
+}
 \references{
 Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902

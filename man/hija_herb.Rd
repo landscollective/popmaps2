@@ -15,11 +15,12 @@ hija_herb
 A data set consisting of 214 verified and georeferenced herbarium voucher specimens for Hilaria jamesii occurring
 within the extent of hija_raster. These herbarium specimens were downloaded from the SEINet data portal (https://swbiodiversity.org/seinet/).
 }
-\examples{\dontrun{
+\examples{
+\dontrun{
    plot(hija_raster)
    points(hija_herb, pch=24, col= 'black', bg='red')
-}}
-
+}
+}
 \references{
 Massatti R & Knowles LL. (2020) The historical context of contemporary
 climatic adaptation: a case study in the climatically dynamic and environmentally complex

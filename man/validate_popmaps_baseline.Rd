@@ -25,4 +25,5 @@ deeper optimization work changes the modeling internals.
 }
 \examples{
 validate_popmaps_baseline()
+
 }

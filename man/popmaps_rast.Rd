@@ -7,7 +7,7 @@
 popmaps_rast(pop_raster_list, input_raster, layer_names = NULL)
 }
 \arguments{
-\item{pop_raster_list}{A list returned by \code{popmaps()}.}
+\item{pop_raster_list}{A list returned by \code{\link[=popmaps]{popmaps()}}.}
 
 \item{input_raster}{The raster used to create \code{pop_raster_list}. It may be a
 \code{terra::SpatRaster}, a legacy \code{raster::RasterLayer}, or a path readable by
@@ -39,4 +39,5 @@ aps <- popmaps(
   ncore = 1
 )
 popmaps_rast(aps, ex_raster)
+
 }
