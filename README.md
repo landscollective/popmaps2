@@ -60,6 +60,9 @@ A useful model is one that:
 - shows whether the best model is sharply supported or whether several parameter combinations perform similarly;
 - can later be compared across candidate surfaces so model choice reflects spatial genetic structure, dispersal, gene flow, and landscape resistance rather than convenience.
 
+See `EMPIRICAL_TUNING_NOTES.md` for the current private empirical-example
+interpretation.
+
 ## Installation
 
 During private development, install from GitHub after authenticating with access to the repository:
@@ -190,6 +193,29 @@ spatial_tuning <- tune_popmaps(
 
 spatial_tuning$best
 ```
+
+To reduce dependence on a single block layout, repeat spatial-block validation
+with rotated spatial partitions:
+
+```r
+repeated_spatial_tuning <- tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  validation = "spatial_block",
+  n_blocks = 4,
+  spatial_block_repeats = 5,
+  spatial_block_seed = 1,
+  empirical_pt_dist = grid$empirical_pt_dist,
+  num_sites = grid$num_sites,
+  num_tested = grid$num_tested,
+  popmod = grid$popmod
+)
+
+repeated_spatial_tuning$best
+```
+
+Repeated spatial-block results include `n_validation_repeats` and
+repeat-level standard deviations such as `rmse_repeat_sd`.
 
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
@@ -334,7 +360,9 @@ Rscript tools/validate-example-tuning.R ../popmaps_test_data
 The script writes best-parameter summaries, near-best parameter support, and
 parameter-effect tables. By default it runs exhaustive grid tuning for both
 leave-one-site-out and spatial-block validation. Set
-`POPMAPS_EXAMPLE_SEARCH=adaptive` to use adaptive sampling instead.
+`POPMAPS_EXAMPLE_SEARCH=adaptive` to use adaptive sampling instead. Set
+`POPMAPS_EXAMPLE_BLOCK_REPEATS=5` and `POPMAPS_EXAMPLE_VALIDATION=spatial_block`
+to run repeated spatial-block validation.
 
 Summarize the latest empirical tuning run with:
 
@@ -344,7 +372,8 @@ Rscript tools/summarize-example-tuning.R ../popmaps_test_data/tuning_outputs
 
 This creates a timestamped report directory with `empirical-tuning-report.md`,
 summary CSVs, and figures for best validation score, near-best support,
-distance-decay scales, and parameter effects.
+distance-decay scales, and parameter effects. When repeated spatial-block output
+is available, the best-score plot includes repeat-level error bars.
 
 ## Optimization Plan
 
@@ -360,7 +389,8 @@ Completed:
 - suggest data-adaptive tuning grids from empirical site distances and sample larger parameter spaces adaptively.
 - report biologically interpretable distance-decay scales and support spatial-block tuning validation.
 - summarize tuning strength, near-best parameter support, and parameter effects with `diagnose_tuning()`.
-- add a repeatable local empirical-example tuning validation script.
+- add a repeatable local empirical-example tuning validation script and reporting workflow.
+- support repeated spatial-block validation with repeat-level uncertainty summaries.
 
 Planned improvements:
 

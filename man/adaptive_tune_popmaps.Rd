@@ -20,6 +20,8 @@ adaptive_tune_popmaps(
   validation = c("loo", "spatial_block"),
   n_blocks = 4,
   block_assignments = NULL,
+  spatial_block_repeats = 1,
+  spatial_block_seed = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
     "dominant_probability"),
   dist_prob_func = function(popmod_temp, distance) {
@@ -70,6 +72,15 @@ stricter test of prediction into undersampled regions.}
 
 \item{block_assignments}{Optional vector assigning each empirical site to a
 spatial block. If supplied, it must have one value per row in \code{input_locs}.}
+
+\item{spatial_block_repeats}{Number of spatial-block layouts to evaluate when
+\code{validation = "spatial_block"} and \code{block_assignments = NULL}. Values
+greater than one repeat the spatial-block validation with rotated spatial
+partitions and report repeat-level uncertainty.}
+
+\item{spatial_block_seed}{Optional random seed for repeated spatial-block
+layouts. The first repeat uses the deterministic default partition; later
+repeats use random spatial rotations.}
 
 \item{primary_metric}{Metric used to select the best parameter combination.}
 

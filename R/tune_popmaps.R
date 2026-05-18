@@ -26,6 +26,13 @@
 #'   `validation = "spatial_block"` and `block_assignments = NULL`.
 #' @param block_assignments Optional vector assigning each empirical site to a
 #'   spatial block. If supplied, it must have one value per row in `input_locs`.
+#' @param spatial_block_repeats Number of spatial-block layouts to evaluate when
+#'   `validation = "spatial_block"` and `block_assignments = NULL`. Values
+#'   greater than one repeat the spatial-block validation with rotated spatial
+#'   partitions and report repeat-level uncertainty.
+#' @param spatial_block_seed Optional random seed for repeated spatial-block
+#'   layouts. The first repeat uses the deterministic default partition; later
+#'   repeats use random spatial rotations.
 #' @param primary_metric Metric used to select the best parameter combination.
 #' @param dist_prob_func Function defining the relationship between distance and
 #'   empirical-site contribution.
@@ -66,6 +73,8 @@ tune_popmaps <- function(input_raster = "",
                          validation = c("loo", "spatial_block"),
                          n_blocks = 4,
                          block_assignments = NULL,
+                         spatial_block_repeats = 1,
+                         spatial_block_seed = NULL,
                          primary_metric = c("rmse", "mae", "hellinger",
                                             "dominant_accuracy",
                                             "dominant_probability"),
@@ -106,6 +115,10 @@ tune_popmaps <- function(input_raster = "",
     "`empirical_pt_dist`",
     nonnegative = TRUE
   )
+  popmaps_check_whole_count(spatial_block_repeats, "`spatial_block_repeats`", positive = TRUE)
+  if (!is.null(spatial_block_seed)) {
+    popmaps_check_whole_count(spatial_block_seed, "`spatial_block_seed`", allow_zero = TRUE)
+  }
 
   parameter_grid <- popmaps_make_tuning_grid(
     num_sites = num_sites,
@@ -123,6 +136,8 @@ tune_popmaps <- function(input_raster = "",
     validation = validation,
     n_blocks = n_blocks,
     block_assignments = block_assignments,
+    spatial_block_repeats = spatial_block_repeats,
+    spatial_block_seed = spatial_block_seed,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = quiet,
@@ -327,6 +342,8 @@ adaptive_tune_popmaps <- function(input_raster = "",
                                   validation = c("loo", "spatial_block"),
                                   n_blocks = 4,
                                   block_assignments = NULL,
+                                  spatial_block_repeats = 1,
+                                  spatial_block_seed = NULL,
                                   primary_metric = c("rmse", "mae", "hellinger",
                                                      "dominant_accuracy",
                                                      "dominant_probability"),
@@ -350,6 +367,10 @@ adaptive_tune_popmaps <- function(input_raster = "",
   popmaps_check_finite_scalar(threshold, "`threshold`")
   popmaps_check_whole_count(n_initial, "`n_initial`", positive = TRUE)
   popmaps_check_whole_count(n_refine, "`n_refine`", allow_zero = TRUE)
+  popmaps_check_whole_count(spatial_block_repeats, "`spatial_block_repeats`", positive = TRUE)
+  if (!is.null(spatial_block_seed)) {
+    popmaps_check_whole_count(spatial_block_seed, "`spatial_block_seed`", allow_zero = TRUE)
+  }
   if (!is.null(seed)) {
     popmaps_check_whole_count(seed, "`seed`", allow_zero = TRUE)
     old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
@@ -404,6 +425,8 @@ adaptive_tune_popmaps <- function(input_raster = "",
     validation = validation,
     n_blocks = n_blocks,
     block_assignments = block_assignments,
+    spatial_block_repeats = spatial_block_repeats,
+    spatial_block_seed = spatial_block_seed,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = TRUE,
@@ -449,6 +472,8 @@ adaptive_tune_popmaps <- function(input_raster = "",
     validation = validation,
     n_blocks = n_blocks,
     block_assignments = block_assignments,
+    spatial_block_repeats = spatial_block_repeats,
+    spatial_block_seed = spatial_block_seed,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = quiet,
@@ -668,6 +693,8 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
                                          validation,
                                          n_blocks,
                                          block_assignments,
+                                         spatial_block_repeats,
+                                         spatial_block_seed,
                                          primary_metric,
                                          dist_prob_func,
                                          quiet,
@@ -693,10 +720,15 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
     locations = locations,
     validation = validation,
     n_blocks = n_blocks,
-    block_assignments = block_assignments
+    block_assignments = block_assignments,
+    spatial_block_repeats = spatial_block_repeats,
+    spatial_block_seed = spatial_block_seed
   )
 
-  fold_rows <- vector("list", nrow(parameter_grid) * nrow(locations))
+  scored_sites_per_grid <- sum(vapply(validation_folds, function(fold) {
+    length(fold$assessment_idx)
+  }, integer(1)))
+  fold_rows <- vector("list", nrow(parameter_grid) * scored_sites_per_grid)
   fold_idx <- 1
 
   for (combo_idx in seq_len(nrow(parameter_grid))) {
@@ -810,12 +842,19 @@ popmaps_default_num_sites <- function(n_training) {
 popmaps_make_validation_folds <- function(locations,
                                           validation,
                                           n_blocks,
-                                          block_assignments = NULL) {
+                                          block_assignments = NULL,
+                                          spatial_block_repeats = 1,
+                                          spatial_block_seed = NULL) {
   n_sites <- nrow(locations)
+  popmaps_check_whole_count(spatial_block_repeats, "`spatial_block_repeats`", positive = TRUE)
+  if (!is.null(spatial_block_seed)) {
+    popmaps_check_whole_count(spatial_block_seed, "`spatial_block_seed`", allow_zero = TRUE)
+  }
 
   if (validation == "loo") {
     return(lapply(seq_len(n_sites), function(site_idx) {
       list(
+        repeat_id = 1L,
         fold_id = site_idx,
         block_id = NA_character_,
         assessment_idx = site_idx,
@@ -828,6 +867,29 @@ popmaps_make_validation_folds <- function(locations,
     stop("Unsupported validation mode.", call. = FALSE)
   }
 
+  if (!is.null(block_assignments) && spatial_block_repeats > 1) {
+    stop("Repeated spatial-block validation requires `block_assignments = NULL`.", call. = FALSE)
+  }
+
+  old_seed <- NULL
+  if (is.null(block_assignments) && spatial_block_repeats > 1 && !is.null(spatial_block_seed)) {
+    old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      get(".Random.seed", envir = .GlobalEnv)
+    } else {
+      NULL
+    }
+    on.exit({
+      if (is.null(old_seed)) {
+        if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+          rm(".Random.seed", envir = .GlobalEnv)
+        }
+      } else {
+        assign(".Random.seed", old_seed, envir = .GlobalEnv)
+      }
+    }, add = TRUE)
+    set.seed(spatial_block_seed)
+  }
+
   if (is.null(block_assignments)) {
     popmaps_check_whole_count(n_blocks, "`n_blocks`", positive = TRUE)
     if (n_blocks < 2) {
@@ -836,7 +898,6 @@ popmaps_make_validation_folds <- function(locations,
     if (n_blocks > n_sites) {
       stop("`n_blocks` cannot exceed the number of empirical sites.", call. = FALSE)
     }
-    block_assignments <- popmaps_assign_spatial_blocks(locations, n_blocks)
   } else {
     if (length(block_assignments) != n_sites) {
       stop("`block_assignments` must have one value per empirical site.", call. = FALSE)
@@ -847,30 +908,53 @@ popmaps_make_validation_folds <- function(locations,
     block_assignments <- as.character(block_assignments)
   }
 
-  block_ids <- unique(block_assignments)
-  if (length(block_ids) < 2) {
-    stop("Spatial-block validation requires at least two non-empty blocks.", call. = FALSE)
+  validation_folds <- list()
+  fold_idx <- 1L
+  for (repeat_id in seq_len(spatial_block_repeats)) {
+    repeat_assignments <- if (is.null(block_assignments)) {
+      angle <- if (repeat_id == 1L) 0 else stats::runif(1, min = 0, max = pi)
+      popmaps_assign_spatial_blocks(locations, n_blocks, angle = angle)
+    } else {
+      block_assignments
+    }
+
+    block_ids <- unique(repeat_assignments)
+    if (length(block_ids) < 2) {
+      stop("Spatial-block validation requires at least two non-empty blocks.", call. = FALSE)
+    }
+
+    for (block_id in block_ids) {
+      assessment_idx <- which(repeat_assignments == block_id)
+      fold_block_id <- if (spatial_block_repeats == 1L) {
+        block_id
+      } else {
+        paste0("repeat", repeat_id, "_", block_id)
+      }
+      validation_folds[[fold_idx]] <- list(
+        repeat_id = repeat_id,
+        fold_id = fold_idx,
+        block_id = fold_block_id,
+        assessment_idx = assessment_idx,
+        analysis_idx = setdiff(seq_len(n_sites), assessment_idx)
+      )
+      fold_idx <- fold_idx + 1L
+    }
   }
 
-  lapply(seq_along(block_ids), function(fold_idx) {
-    block_id <- block_ids[fold_idx]
-    assessment_idx <- which(block_assignments == block_id)
-
-    list(
-      fold_id = fold_idx,
-      block_id = block_id,
-      assessment_idx = assessment_idx,
-      analysis_idx = setdiff(seq_len(n_sites), assessment_idx)
-    )
-  })
+  validation_folds
 }
 
-popmaps_assign_spatial_blocks <- function(locations, n_blocks) {
+popmaps_assign_spatial_blocks <- function(locations, n_blocks, angle = 0) {
   n_x <- ceiling(sqrt(n_blocks))
   n_y <- ceiling(n_blocks / n_x)
+  coords <- as.matrix(locations[, c("V2", "V3"), drop = FALSE])
+  coords <- scale(coords, center = TRUE, scale = TRUE)
+  coords[!is.finite(coords)] <- 0
+  rotated_x <- coords[, 1] * cos(angle) - coords[, 2] * sin(angle)
+  rotated_y <- coords[, 1] * sin(angle) + coords[, 2] * cos(angle)
 
-  x_bin <- popmaps_rank_bins(locations$V2, n_x)
-  y_bin <- popmaps_rank_bins(locations$V3, n_y)
+  x_bin <- popmaps_rank_bins(rotated_x, n_x)
+  y_bin <- popmaps_rank_bins(rotated_y, n_y)
   paste0("x", x_bin, "_y", y_bin)
 }
 
@@ -1124,11 +1208,19 @@ popmaps_order_tuning_results <- function(results, primary_metric) {
   metric_values <- results[[primary_metric]]
   order_values <- if (maximize) -metric_values else metric_values
   order_values[!is.finite(order_values)] <- Inf
+  metric_sd_col <- paste0(primary_metric, "_repeat_sd")
+  metric_sd_values <- if (metric_sd_col %in% names(results)) {
+    results[[metric_sd_col]]
+  } else {
+    rep(NA_real_, nrow(results))
+  }
+  metric_sd_values[!is.finite(metric_sd_values)] <- Inf
 
   order(
     results$failed_folds,
     -results$n_scored,
     order_values,
+    metric_sd_values,
     results$num_tested,
     results$num_sites,
     results$popmod,
@@ -1338,6 +1430,7 @@ popmaps_tuning_fold_row <- function(combo,
     data.frame(
       combo_id = combo$combo_id,
       validation = validation,
+      repeat_id = validation_fold$repeat_id,
       fold_id = validation_fold$fold_id,
       block_id = validation_fold$block_id,
       site_index = site_idx,
@@ -1390,6 +1483,22 @@ popmaps_summarize_tuning_results <- function(folds) {
         value
       }
     }, numeric(1))
+    repeat_sd <- vapply(metric_cols, function(metric) {
+      repeat_means <- tapply(
+        folds[[metric]][idx],
+        folds$repeat_id[idx],
+        mean,
+        na.rm = TRUE
+      )
+      repeat_means[is.nan(repeat_means)] <- NA_real_
+      repeat_means <- repeat_means[is.finite(repeat_means)]
+      if (length(repeat_means) > 1) {
+        stats::sd(repeat_means)
+      } else {
+        NA_real_
+      }
+    }, numeric(1))
+    names(repeat_sd) <- paste0(metric_cols, "_repeat_sd")
 
     data.frame(
       combo_id = combo_id,
@@ -1400,12 +1509,14 @@ popmaps_summarize_tuning_results <- function(folds) {
       half_distance_km = first$half_distance_km,
       ten_pct_distance_km = first$ten_pct_distance_km,
       empirical_pt_dist = first$empirical_pt_dist,
+      n_validation_repeats = length(unique(folds$repeat_id[idx])),
       n_validation_folds = length(unique(folds$fold_id[idx])),
       n_folds = sum(idx),
       n_scored = sum(is.finite(folds$rmse[idx])),
       n_training_min = min(folds$n_training[idx]),
       failed_folds = sum(!is.na(folds$message[idx]) & nzchar(folds$message[idx])),
       t(metrics),
+      t(repeat_sd),
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
