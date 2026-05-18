@@ -20,3 +20,4 @@
 - Added `half_distance_km` and `ten_pct_distance_km` tuning summaries plus spatial-block validation for more biologically interpretable parameter selection.
 - Added `diagnose_tuning()` to summarize tuning strength, near-best parameter support, and parameter effects.
 - Added `tools/validate-example-tuning.R` for repeatable local tuning validation across empirical example datasets kept outside the package repository.
+- Added `tools/summarize-example-tuning.R` to create empirical tuning summary tables, a markdown report, and diagnostic plots.

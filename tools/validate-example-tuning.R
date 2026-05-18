@@ -8,7 +8,7 @@ read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
   } else {
-    Sys.getenv(env, unset = default)
+    Sys.getenv(env, unset = if (is.null(default)) "" else default)
   }
 
   if (required && (is.null(value) || is.na(value) || !nzchar(value))) {
