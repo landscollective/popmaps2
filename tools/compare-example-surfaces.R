@@ -1,5 +1,14 @@
 #!/usr/bin/env Rscript
 
+script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (length(script_file_arg)) {
+  dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
+} else {
+  file.path(getwd(), "tools")
+}
+source(file.path(script_dir, "popmaps-script-utils.R"))
+resource_config <- popmaps_configure_script_resources("POPMAPS_SURFACE")
+
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
@@ -371,9 +380,26 @@ grid_table <- if (length(grid_rows) > 0) do.call(rbind, grid_rows) else data.fra
 summary_path <- file.path(output_dir, paste0("empirical-surface-comparison-summary-", run_stamp, ".csv"))
 support_path <- file.path(output_dir, paste0("empirical-surface-comparison-support-", run_stamp, ".csv"))
 grid_path <- file.path(output_dir, paste0("empirical-surface-comparison-grids-", run_stamp, ".csv"))
+resource_path <- file.path(output_dir, paste0("empirical-surface-comparison-run-summary-", run_stamp, ".csv"))
 write_table(summary_table, summary_path)
 write_table(support_table, support_path)
 write_table(grid_table, grid_path)
+write_table(
+  cbind(
+    data.frame(
+      created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
+      input_dir = input_dir,
+      output_dir = output_dir,
+      aggregate_fact = aggregate_fact,
+      validation_modes = paste(validation_modes, collapse = ","),
+      n_datasets = nrow(pairs),
+      include_inverse = include_inverse,
+      stringsAsFactors = FALSE
+    ),
+    popmaps_resource_row(resource_config)
+  ),
+  resource_path
+)
 
 report_dir <- file.path(output_dir, paste0("report-", run_stamp))
 figure_dir <- file.path(report_dir, "figures")
@@ -391,10 +417,19 @@ report <- c(
   paste0("Source summary table: `", summary_path, "`"),
   paste0("Source support table: `", support_path, "`"),
   paste0("Source grid table: `", grid_path, "`"),
+  paste0("Source run summary table: `", resource_path, "`"),
   "",
   paste0("Raster aggregation factor: ", aggregate_fact),
   paste0("Validation modes: ", paste(validation_modes, collapse = ", ")),
   paste0("Spatial block repeats: ", spatial_block_repeats),
+  paste0(
+    "Resource configuration: ",
+    resource_config$threads,
+    " of ",
+    resource_config$available_threads,
+    " detected logical processors; terra memfrac = ",
+    resource_config$terra_memfrac
+  ),
   "",
   "Lower RMSE values are better. `percent_from_best` is the percent increase in RMSE relative to the best-ranked surface for that species and validation design.",
   "`surfaces_indistinguishable` means at least two surfaces were within the near-best tolerance, so the data do not clearly support one surface over the other.",

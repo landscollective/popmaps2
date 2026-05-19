@@ -27,7 +27,7 @@ This repository is not yet a polished public release. It is a development branch
 - adding tests before deeper algorithmic refactoring;
 - replacing slow or deprecated spatial code with modern `terra`/`sf`-based workflows.
 
-The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Parameter tuning can also use the modern internal least-cost helper for `surface = "C"` suitability, conductance, and resistance surfaces. Full suitability-weighted ancestry-surface estimation with `popmaps(surface = "C")` still uses the legacy implementation and remains a priority for modernization.
+The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes faster geographic-distance and least-cost-distance paths for `popmaps(surface = "G")` and `popmaps(surface = "C")`. The `G` path preserves POPMAPS 1.03 output on validation cases, and the modern `C` path uses an internal least-cost helper for suitability, conductance, and resistance surfaces while keeping the original suitability-as-conductance default.
 
 ## Relationship to Related Software
 
@@ -62,8 +62,7 @@ A useful model is one that:
 
 See `EMPIRICAL_TUNING_NOTES.md` for the current local empirical-example
 interpretation. See `G_VS_C_DESIGN.md` for the intended meaning of geographic
-versus suitability-weighted surface comparisons before `surface = "C"` is
-modernized.
+versus suitability-weighted surface comparisons.
 
 ## Installation
 
@@ -77,13 +76,14 @@ remotes::install_github("landscollective/popmaps2")
 For local development:
 
 ```r
-install.packages(c("raster", "sp", "foreach", "doParallel", "gtools", "maps", "plotrix", "MASS", "testthat"))
+install.packages(c("raster", "sp", "terra", "igraph", "gtools", "maps", "plotrix", "MASS", "testthat"))
 remotes::install_local(".")
 ```
 
-Optional legacy functionality currently requires additional packages:
+Optional legacy plotting and jackknife functionality currently requires
+additional packages:
 
-- `gdistance` for least-cost distance surfaces with `surface = "C"`;
+- `gdistance` for the legacy `jackknife(surface = "C")` path;
 - `gplots` for `jackknife_viz()`;
 - `viridis` for legacy plotting functions.
 
@@ -104,7 +104,7 @@ Raster values are used differently depending on `surface`:
 - `surface = "G"` uses geographic distance between empirical sites and raster cells. Raster values do not affect distances or ancestry weights, although `NA` values and `threshold` can still define which cells receive estimates.
 - `surface = "C"` uses least-cost distance across raster cell values. In the original workflow these values are MaxEnt species distribution model logistic values, interpreted as habitat suitability or occupancy probability. Higher values act as higher conductance/easier movement; lower values increase effective distance.
 
-Use `threshold` to skip cells where ancestry coefficients should not be estimated, such as cells below a species distribution model suitability threshold. In the legacy implementation, `threshold` is a prediction mask rather than a hard least-cost barrier.
+Use `threshold` to skip cells where ancestry coefficients should not be estimated, such as cells below a species distribution model suitability threshold. `threshold` is a prediction mask rather than a hard least-cost barrier.
 
 Candidate surfaces can be prepared explicitly with:
 
@@ -130,11 +130,11 @@ format. Running SDMs, EEMS/FEEMS, Circuitscape, or ResistanceGA remains outside
 the core scope of `popmaps2`; the package focuses on using candidate surfaces to
 interpolate ancestry and compare predictive support.
 
-`tune_popmaps(surface = "C")` can now tune against suitability, conductance, or
-resistance rasters with the internal least-cost distance helper. For `surface =
-"C"`, tuning distances are relative cost-distance units rather than geographic
-kilometers, so decay summaries should be interpreted as surface-specific
-distance scales.
+`popmaps(surface = "C")`, `tune_popmaps(surface = "C")`, and
+`compare_popmaps_surfaces()` can use suitability, conductance, or resistance
+rasters with the internal least-cost distance helper. For `surface = "C"`,
+distances are relative cost-distance units rather than geographic kilometers, so
+decay summaries should be interpreted as surface-specific distance scales.
 
 ### 2. Empirical Genetic Locations
 
@@ -324,8 +324,7 @@ aps <- popmaps(
   num_sites = 15,
   num_tested = 4,
   popmod = -0.05,
-  threshold = 0,
-  ncore = 2
+  threshold = 0
 )
 ```
 
@@ -429,6 +428,22 @@ Optional environment variables:
 | `POPMAPS_ASLO_WRITE_RASTERS` | `false` | Write GeoTIFF output layers under `rasters/`. |
 | `POPMAPS_ASLO_SAVE_RDS` | `false` | Save the full R result object for debugging. |
 
+The local validation scripts also share resource settings that are intended to
+work across macOS, Linux, Windows, and common cluster environments without
+requiring `doParallel`, `foreach`, or package-level use of R's `parallel`
+package:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `POPMAPS_THREADS` | auto | Set logical processors used by threaded system libraries. Use `all` to request every detected processor. |
+| `POPMAPS_THREAD_FRACTION` | `0.75` | Fraction of detected processors used when `POPMAPS_THREADS` is unset. One processor is left free on machines with more than two processors. |
+| `POPMAPS_TERRA_MEMFRAC` | `0.70` | Fraction of memory `terra` may use before writing temporary files. |
+| `POPMAPS_TMPDIR` | R session tempdir | Directory for temporary raster files and other temporary outputs. |
+
+Script-specific overrides such as `POPMAPS_ASLO_THREADS`,
+`POPMAPS_EXAMPLE_THREADS`, `POPMAPS_SURFACE_THREADS`, and
+`POPMAPS_TUNING_THREADS` take precedence over `POPMAPS_THREADS`.
+
 To rerun tuning validation across empirical examples kept outside the package,
 place `*_avg.asc` rasters and matching `*.txt` location files in a directory and
 run:
@@ -520,12 +535,13 @@ Completed:
   path on small validation rasters.
 - extend `tune_popmaps()` to suitability-, conductance-, and
   resistance-weighted least-cost surfaces.
+- route full `popmaps(surface = "C")` ancestry-surface estimation through the
+  internal least-cost helper.
 - add `compare_popmaps_surfaces()` for matched predictive comparison of
   user-supplied geographic and landscape surfaces.
 
 Planned improvements:
 
-- replace `gdistance` least-cost routines with a maintained alternative while preserving the original suitability-as-conductance behavior;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;
 - benchmark legacy and optimized implementations on small, medium, and full-size rasters;

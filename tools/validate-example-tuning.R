@@ -1,5 +1,14 @@
 #!/usr/bin/env Rscript
 
+script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (length(script_file_arg)) {
+  dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
+} else {
+  file.path(getwd(), "tools")
+}
+source(file.path(script_dir, "popmaps-script-utils.R"))
+resource_config <- popmaps_configure_script_resources("POPMAPS_EXAMPLE")
+
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
@@ -222,5 +231,21 @@ write_table(summary_table, file.path(output_dir, paste0("empirical-tuning-best-"
 write_table(overview_table, file.path(output_dir, paste0("empirical-tuning-overview-", search, "-", run_stamp, ".csv")))
 write_table(range_table, file.path(output_dir, paste0("empirical-tuning-parameter-ranges-", search, "-", run_stamp, ".csv")))
 write_table(effect_table, file.path(output_dir, paste0("empirical-tuning-parameter-effects-", search, "-", run_stamp, ".csv")))
+write_table(
+  cbind(
+    data.frame(
+      created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
+      input_dir = input_dir,
+      output_dir = output_dir,
+      search = search,
+      aggregate_fact = aggregate_fact,
+      validation_modes = paste(validation_modes, collapse = ","),
+      n_datasets = nrow(pairs),
+      stringsAsFactors = FALSE
+    ),
+    popmaps_resource_row(resource_config)
+  ),
+  file.path(output_dir, paste0("empirical-tuning-run-summary-", search, "-", run_stamp, ".csv"))
+)
 
 print(overview_table)

@@ -8,20 +8,25 @@ test_that("embedded Hilaria jamesii data have the expected shape", {
   expect_equal(ncol(hija_herb), 2)
 })
 
-test_that("least-cost mode reports a clear optional dependency error", {
+test_that("least-cost mode runs without the optional legacy gdistance package", {
   if (requireNamespace("gdistance", quietly = TRUE)) {
     skip("gdistance is installed")
   }
 
   ex_raster <- raster::aggregate(hija_raster, fact = 64)
 
-  expect_error(
-    popmaps(
-      input_raster = ex_raster,
-      input_locs = hija_struc,
-      surface = "C",
-      ncore = 1
-    ),
-    "gdistance"
+  result <- popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    surface = "C",
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.05,
+    threshold = 0,
+    ncore = 1
   )
+
+  expect_length(result, 2 + ncol(hija_struc) - 3)
+  expect_equal(dim(result[[1]]), dim(ex_raster)[1:2])
 })

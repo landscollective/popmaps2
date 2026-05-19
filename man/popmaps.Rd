@@ -16,23 +16,30 @@ popmaps(
   threshold = 0,
   dist_prob_func = function(popmod_temp, distance) {
      exp(popmod_temp * distance)
- }
+ },
+  surface_values = c("suitability", "conductance", "resistance"),
+  rescale_conductance = FALSE,
+  resistance_epsilon = sqrt(.Machine$double.eps)
 )
 }
 \arguments{
 \item{input_raster}{An R RasterLayer object defining the geographic extent for the spatial
 interpolation. Values in the cells will be used to calculate distance used in the
-dist_prob_func if surface = ‘C’. See example data hija_raster.}
+dist_prob_func if surface = 'C'. See example data hija_raster.}
 
 \item{input_locs}{An R object (rows = total # empirical sites, columns = total # genetic axes + 3])
 with column 1: site name; column 2: decimal longitude; column 3: decimal latitude;
 column 4…column x: ancestry coefficients for genetic axis 1…genetic axis x.
 Functions depend on this precise format – see example data hija_struc.}
 
-\item{surface}{A string (either ‘G’ or ‘C’) that determines how input_raster is used to calculate
+\item{surface}{A string (either 'G' or 'C') that determines how input_raster is used to calculate
 ancestry coefficients. If 'G', the spatial attributes of input_raster will be used to calculate
-geographic (i.e., Euclidean) distances between empirical sites and inference sites. If ‘C’,
+geographic (i.e., Euclidean) distances between empirical sites and inference sites. If 'C',
 least-cost distances are calculated using the values contained in the raster cells.}
+
+\item{surface_values}{Character. Meaning of raster values when \code{surface = "C"}.
+\code{"suitability"} and \code{"conductance"} use values directly; \code{"resistance"}
+converts values to conductance using an inverse transform.}
 
 \item{empirical_pt_dist}{An integer representing the minimum distance that all sites in num_tested
 must be separated by. If num_tested = 3, the closest two empirical sites to the cell are
@@ -58,9 +65,9 @@ in Massatti & Winkler 2022). Using the default dist_prob_func, values ranging fr
 have the most influence on the shape of the curve. Modifying dist_prob_func will require users to
 determine how to set popmod accordingly.}
 
-\item{ncore}{An integer allowing the user to specify how many cores on the local machine should be
-used to facilitate legacy least-cost interpolation. The optimized geographic-distance path
-currently precomputes distances and runs sequentially.}
+\item{ncore}{An integer retained for compatibility with POPMAPS 1.03 calls.
+The optimized geographic- and least-cost-distance paths currently
+precompute distances and run sequentially.}
 
 \item{threshold}{A float (0.0-1.0) determined during species distribution modeling inference. If > 0,
 ancestry coefficients will not be estimated in raster cells with values < threshold, which saves
@@ -70,6 +77,12 @@ would never be expected to occur.}
 \item{dist_prob_func}{A function defining the relationship between distance and the contribution
 of an empirical site’s ancestry coefficients to the estimation of ancestry coefficients at
 an inference cell. The default equation defines the relationship in Fig. 2 of Massatti & Winkler (2022).}
+
+\item{rescale_conductance}{Logical. If \code{TRUE}, rescale non-missing
+conductance values to the range 0-1 after any resistance conversion.}
+
+\item{resistance_epsilon}{Positive numeric scalar added to resistance values
+before inversion when \code{surface_values = "resistance"}.}
 }
 \description{
 This function estimates an ancestry probability surface when supplied
