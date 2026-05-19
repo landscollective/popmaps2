@@ -249,6 +249,37 @@ repeated_spatial_tuning$best
 Repeated spatial-block results include `n_validation_repeats` and
 repeat-level standard deviations such as `rmse_repeat_sd`.
 
+Compare candidate geographic and landscape surfaces with matched validation:
+
+```r
+candidate_surfaces <- list(
+  geographic = prepare_popmaps_surface(ex_raster, surface = "G"),
+  suitability = prepare_popmaps_surface(
+    ex_raster,
+    surface = "C",
+    surface_values = "suitability"
+  )
+)
+
+surface_comparison <- compare_popmaps_surfaces(
+  input_locs = hija_struc,
+  surfaces = candidate_surfaces,
+  validation = "spatial_block",
+  spatial_block_repeats = 5,
+  empirical_pt_dist = 0,
+  num_sites = 5,
+  num_tested = 2,
+  popmod = -0.01
+)
+
+surface_comparison$summary
+surface_comparison$support
+```
+
+This comparison asks which supplied surface best predicts withheld empirical
+ancestry estimates under the POPMAPS interpolation workflow. It does not replace
+upstream landscape-genetic or SDM analyses.
+
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
 
@@ -334,7 +365,8 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | Function | Purpose |
 | --- | --- |
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
-| `tune_popmaps()` | Tune geographic-distance POPMAPS parameters with leave-one-out or spatial-block validation metrics. |
+| `tune_popmaps()` | Tune geographic or least-cost POPMAPS parameters with leave-one-out or spatial-block validation metrics. |
+| `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
 | `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
@@ -472,11 +504,12 @@ Completed:
   path on small validation rasters.
 - extend `tune_popmaps()` to suitability-, conductance-, and
   resistance-weighted least-cost surfaces.
+- add `compare_popmaps_surfaces()` for matched predictive comparison of
+  user-supplied geographic and landscape surfaces.
 
 Planned improvements:
 
 - replace `gdistance` least-cost routines with a maintained alternative while preserving the original suitability-as-conductance behavior;
-- compare `surface = "G"` and `surface = "C"` with the same validation metrics and uncertainty diagnostics;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;
 - benchmark legacy and optimized implementations on small, medium, and full-size rasters;
