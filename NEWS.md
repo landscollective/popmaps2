@@ -31,3 +31,4 @@
 - Added `tools/compare-example-surfaces.R` for local empirical G-vs-SDM surface comparisons, summary tables, reports, and plots across uncommitted example datasets.
 - Replaced the full `popmaps(surface = "C")` least-cost interpolation engine with the internal distance helper, removing the `gdistance` requirement from the main ancestry-surface workflow while preserving the original suitability-as-conductance default.
 - Added shared resource configuration for local validation/reporting scripts, including cross-platform processor detection, conservative thread defaults for system libraries, terra memory settings, and run-summary reporting.
+- Added `tools/benchmark-aslo-local.R` for repeatable small-, medium-, and full-scale ASLO runtime and memory checks.
