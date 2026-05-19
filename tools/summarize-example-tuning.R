@@ -1,5 +1,14 @@
 #!/usr/bin/env Rscript
 
+script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (length(script_file_arg)) {
+  dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
+} else {
+  file.path(getwd(), "tools")
+}
+source(file.path(script_dir, "popmaps-script-utils.R"))
+resource_config <- popmaps_configure_script_resources("POPMAPS_TUNING")
+
 read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -318,6 +327,18 @@ rownames(parameter_diversity) <- NULL
 write_table(summary, file.path(report_dir, "empirical-tuning-summary.csv"))
 write_table(parameter_diversity, file.path(report_dir, "empirical-tuning-parameter-diversity.csv"))
 write_table(parameter_ranges, file.path(report_dir, "empirical-tuning-parameter-ranges.csv"))
+write_table(
+  cbind(
+    data.frame(
+      created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
+      output_dir = output_dir,
+      report_dir = report_dir,
+      stringsAsFactors = FALSE
+    ),
+    popmaps_resource_row(resource_config)
+  ),
+  file.path(report_dir, "empirical-tuning-report-run-summary.csv")
+)
 write_table(parameter_effects, file.path(report_dir, "empirical-tuning-parameter-effects.csv"))
 
 plot_best_score(summary, file.path(figure_dir, "best-validation-score.png"))

@@ -324,8 +324,7 @@ aps <- popmaps(
   num_sites = 15,
   num_tested = 4,
   popmod = -0.05,
-  threshold = 0,
-  ncore = 2
+  threshold = 0
 )
 ```
 
@@ -428,6 +427,22 @@ Optional environment variables:
 | `POPMAPS_ASLO_THRESHOLD` | `0` | Set `threshold`. |
 | `POPMAPS_ASLO_WRITE_RASTERS` | `false` | Write GeoTIFF output layers under `rasters/`. |
 | `POPMAPS_ASLO_SAVE_RDS` | `false` | Save the full R result object for debugging. |
+
+The local validation scripts also share resource settings that are intended to
+work across macOS, Linux, Windows, and common cluster environments without
+requiring `doParallel`, `foreach`, or package-level use of R's `parallel`
+package:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `POPMAPS_THREADS` | auto | Set logical processors used by threaded system libraries. Use `all` to request every detected processor. |
+| `POPMAPS_THREAD_FRACTION` | `0.75` | Fraction of detected processors used when `POPMAPS_THREADS` is unset. One processor is left free on machines with more than two processors. |
+| `POPMAPS_TERRA_MEMFRAC` | `0.70` | Fraction of memory `terra` may use before writing temporary files. |
+| `POPMAPS_TMPDIR` | R session tempdir | Directory for temporary raster files and other temporary outputs. |
+
+Script-specific overrides such as `POPMAPS_ASLO_THREADS`,
+`POPMAPS_EXAMPLE_THREADS`, `POPMAPS_SURFACE_THREADS`, and
+`POPMAPS_TUNING_THREADS` take precedence over `POPMAPS_THREADS`.
 
 To rerun tuning validation across empirical examples kept outside the package,
 place `*_avg.asc` rasters and matching `*.txt` location files in a directory and

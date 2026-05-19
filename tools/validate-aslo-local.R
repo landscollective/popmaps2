@@ -1,5 +1,14 @@
 #!/usr/bin/env Rscript
 
+script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+script_dir <- if (length(script_file_arg)) {
+  dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
+} else {
+  file.path(getwd(), "tools")
+}
+source(file.path(script_dir, "popmaps-script-utils.R"))
+resource_config <- popmaps_configure_script_resources("POPMAPS_ASLO")
+
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
@@ -103,7 +112,7 @@ num_sites <- read_integer_env("POPMAPS_ASLO_NUM_SITES", 15)
 num_tested <- read_integer_env("POPMAPS_ASLO_NUM_TESTED", 4)
 popmod <- read_numeric_env("POPMAPS_ASLO_POPMOD", -0.05)
 threshold <- read_numeric_env("POPMAPS_ASLO_THRESHOLD", 0)
-ncore <- read_integer_env("POPMAPS_ASLO_NCORE", 1)
+ncore <- read_integer_env("POPMAPS_ASLO_NCORE", resource_config$threads)
 write_rasters <- truthy_env(Sys.getenv("POPMAPS_ASLO_WRITE_RASTERS", unset = "false"))
 save_rds <- truthy_env(Sys.getenv("POPMAPS_ASLO_SAVE_RDS", unset = "false"))
 
@@ -157,6 +166,7 @@ run_summary <- data.frame(
   system_seconds = unname(runtime[["sys.self"]]),
   stringsAsFactors = FALSE
 )
+run_summary <- cbind(run_summary, popmaps_resource_row(resource_config))
 
 run_summary_path <- file.path(output_dir, "aslo-run-summary.csv")
 layer_summary_path <- file.path(output_dir, "aslo-layer-summary.csv")
