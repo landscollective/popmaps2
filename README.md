@@ -27,7 +27,7 @@ This repository is not yet a polished public release. It is a development branch
 - adding tests before deeper algorithmic refactoring;
 - replacing slow or deprecated spatial code with modern `terra`/`sf`-based workflows.
 
-The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Least-cost modeling with `surface = "C"` still uses the legacy implementation and remains a priority for modernization.
+The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Suitability-weighted least-cost modeling with `surface = "C"` still uses the legacy implementation and remains a priority for modernization.
 
 ## Relationship to Related Software
 
@@ -40,17 +40,17 @@ The closest conceptual neighbors include:
 | [POPMAPS](https://www.usgs.gov/software/popmaps-r-package-estimate-ancestry-probability-surfaces) | Estimate ancestry probability surfaces from empirical ancestry coefficients and raster surfaces. | Direct predecessor. `popmaps2` preserves the original workflow while adding modern package infrastructure, faster geographic interpolation, stronger validation, and clearer tuning outputs. |
 | [conStruct](https://rdrr.io/github/gbradburd/conStruct/) | Model continuous and discrete population genetic structure while accounting for spatial covariance. | Strong upstream population-structure model, but not primarily a rasterized ancestry-surface tool for management planning. |
 | [EEMS](https://github.com/dipetkov/eems), [FEEMS](https://github.com/NovembreLab/feems), and [reems](https://cran.r-universe.dev/reems) | Estimate effective migration surfaces and spatial variation in gene flow. | Biologically relevant for interpreting spatial genetic structure, but the output is migration or effective resistance rather than ancestry probability surfaces. |
-| [ResistanceGA](https://github.com/wpeterman/ResistanceGA) | Optimize landscape resistance surfaces against genetic distances. | Highly relevant to future `surface = "C"` work. `popmaps2` will compare geographic and cost/resistance surfaces for ancestry interpolation rather than optimizing resistance surfaces as the final product. |
+| [ResistanceGA](https://github.com/wpeterman/ResistanceGA) | Optimize landscape resistance surfaces against genetic distances. | Highly relevant to future `surface = "C"` work. `popmaps2` will compare geographic and biologically informed landscape surfaces for ancestry interpolation rather than optimizing resistance surfaces as the final product. |
 | [TESS3/tess3r](https://rdrr.io/github/bcm-uga/TESS3_encho_sen/man/tess3r.html), Geneland, LEA, ADMIXTURE-style tools | Infer ancestry coefficients, clusters, or spatial population structure. | Useful upstream sources of empirical ancestry estimates, but not designed to interpolate those estimates across user-defined management rasters. |
 | [mapmixture](https://www.rdocumentation.org/packages/mapmixture/versions/1.2.0) and [pophelper](https://www.royfrancis.com/pophelper/) | Visualize admixture or population-structure results. | Complementary visualization tools, not interpolation or tuning frameworks. |
 | [assignPOP](https://cran.r-universe.dev/assignPOP/doc/manual.html) | Population assignment and assignment accuracy with cross-validation. | Shares the validation mindset, but focuses on assigning individuals or populations rather than creating continuous ancestry probability surfaces. |
 | [adegenet/sPCA](https://rdrr.io/cran/adegenet/man/spca.html) | Exploratory spatial genetic analysis and spatial principal components. | Useful for detecting spatial genetic structure, but not a direct ancestry-surface interpolation workflow. |
 
-The goal of `popmaps2` is therefore to identify an interpolation model that best reflects the spatial genetic structure of a focal species, given available empirical ancestry data. This includes selecting the surface over which ancestry is interpolated, such as geographic distance (`surface = "G"`) or a landscape-resistance/cost surface (`surface = "C"`), and selecting parameters that control how empirical sampling locations contribute to predictions across space. The preferred model should minimize predictive error while avoiding false precision: if the empirical data do not support confident ancestry estimates in some areas, the resulting surfaces should show that uncertainty rather than hide it.
+The goal of `popmaps2` is therefore to identify an interpolation model that best reflects the spatial genetic structure of a focal species, given available empirical ancestry data. This includes selecting the surface over which ancestry is interpolated, such as geographic distance (`surface = "G"`) or a suitability-weighted landscape surface (`surface = "C"`), and selecting parameters that control how empirical sampling locations contribute to predictions across space. The preferred model should minimize predictive error while avoiding false precision: if the empirical data do not support confident ancestry estimates in some areas, the resulting surfaces should show that uncertainty rather than hide it.
 
 ## Model Selection Goal
 
-Parameter tuning is not meant to find universal defaults. The goal is to ask whether a species' empirical ancestry estimates are better predicted by local, broad, sparse, dense, weakly distance-decayed, or strongly distance-decayed interpolation behavior. That choice should be evaluated with withheld empirical sites, and ultimately with competing geographic (`surface = "G"`) and cost/resistance (`surface = "C"`) surfaces.
+Parameter tuning is not meant to find universal defaults. The goal is to ask whether a species' empirical ancestry estimates are better predicted by local, broad, sparse, dense, weakly distance-decayed, or strongly distance-decayed interpolation behavior. That choice should be evaluated with withheld empirical sites, and ultimately with competing geographic (`surface = "G"`) and suitability-weighted (`surface = "C"`) surfaces.
 
 A useful model is one that:
 
@@ -58,10 +58,12 @@ A useful model is one that:
 - remains honest about poorly supported regions instead of creating false precision;
 - produces biologically interpretable distance-decay scales, such as the distances where site weights decay to 50% or 10%;
 - shows whether the best model is sharply supported or whether several parameter combinations perform similarly;
-- can later be compared across candidate surfaces so model choice reflects spatial genetic structure, dispersal, gene flow, and landscape resistance rather than convenience.
+- can later be compared across candidate surfaces so model choice reflects spatial genetic structure, dispersal, gene flow, and habitat-mediated connectivity rather than convenience.
 
 See `EMPIRICAL_TUNING_NOTES.md` for the current private empirical-example
-interpretation.
+interpretation. See `G_VS_C_DESIGN.md` for the intended meaning of geographic
+versus suitability-weighted surface comparisons before `surface = "C"` is
+modernized.
 
 ## Installation
 
@@ -99,10 +101,34 @@ Internally, new input handling is `terra`-first. Some legacy modeling and plotti
 
 Raster values are used differently depending on `surface`:
 
-- `surface = "G"` uses geographic distance between empirical sites and raster cells.
-- `surface = "C"` uses least-cost distance across raster cell values.
+- `surface = "G"` uses geographic distance between empirical sites and raster cells. Raster values do not affect distances or ancestry weights, although `NA` values and `threshold` can still define which cells receive estimates.
+- `surface = "C"` uses least-cost distance across raster cell values. In the original workflow these values are MaxEnt species distribution model logistic values, interpreted as habitat suitability or occupancy probability. Higher values act as higher conductance/easier movement; lower values increase effective distance.
 
-Use `threshold` to skip cells where ancestry coefficients should not be estimated, such as cells below a species distribution model suitability threshold.
+Use `threshold` to skip cells where ancestry coefficients should not be estimated, such as cells below a species distribution model suitability threshold. In the legacy implementation, `threshold` is a prediction mask rather than a hard least-cost barrier.
+
+Candidate surfaces can be prepared explicitly with:
+
+```r
+sdm_surface <- prepare_popmaps_surface(
+  input_raster = hija_raster,
+  surface = "C",
+  surface_values = "suitability"
+)
+
+resistance_surface <- prepare_popmaps_surface(
+  input_raster = hija_raster,
+  surface = "C",
+  surface_values = "resistance"
+)
+```
+
+`surface_values = "suitability"` and `"conductance"` use raster values directly.
+`surface_values = "resistance"` converts values to conductance with an inverse
+transform. EEMS/FEEMS-derived gene-flow surfaces should usually be treated as
+conductance-like inputs after they are exported to a supported raster or distance
+format. Running SDMs, EEMS/FEEMS, Circuitscape, or ResistanceGA remains outside
+the core scope of `popmaps2`; the package focuses on using candidate surfaces to
+interpolate ancestry and compare predictive support.
 
 ### 2. Empirical Genetic Locations
 
@@ -391,11 +417,14 @@ Completed:
 - summarize tuning strength, near-best parameter support, and parameter effects with `diagnose_tuning()`.
 - add a repeatable local empirical-example tuning validation script and reporting workflow.
 - support repeated spatial-block validation with repeat-level uncertainty summaries.
+- add `prepare_popmaps_surface()` to declare whether candidate `C` rasters
+  represent suitability, conductance, or resistance before modern least-cost
+  modeling.
 
 Planned improvements:
 
-- extend `tune_popmaps()` to least-cost surfaces after the `surface = "C"` engine is modernized;
-- replace `gdistance` least-cost routines with a maintained alternative;
+- extend `tune_popmaps()` to suitability-weighted least-cost surfaces after the `surface = "C"` engine is modernized;
+- replace `gdistance` least-cost routines with a maintained alternative while preserving the original suitability-as-conductance behavior;
 - compare `surface = "G"` and `surface = "C"` with the same validation metrics and uncertainty diagnostics;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;
 - add progress reporting and reproducible parallel execution;

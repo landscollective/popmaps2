@@ -22,3 +22,5 @@
 - Added `tools/validate-example-tuning.R` for repeatable local tuning validation across empirical example datasets kept outside the package repository.
 - Added `tools/summarize-example-tuning.R` to create empirical tuning summary tables, a markdown report, and diagnostic plots.
 - Added repeated spatial-block validation with reproducible rotated spatial partitions and repeat-level uncertainty summaries.
+- Documented the scientific contract for comparing geographic-distance (`surface = "G"`) and SDM suitability-weighted least-cost (`surface = "C"`) surfaces.
+- Added `prepare_popmaps_surface()` to declare candidate raster semantics, including suitability, conductance, and resistance-to-conductance transformations.
