@@ -14,7 +14,7 @@
 - Added `validate_popmaps_baseline()` for repeatable comparison against a frozen POPMAPS 1.03 reference result.
 - Added an optimized geographic-distance engine for `popmaps(surface = "G")` that precomputes cell-site and empirical-site distances while preserving POPMAPS 1.03 outputs on validation cases.
 - Added `popmaps_rast()` and `write_popmaps()` to convert `popmaps()` output to `terra` rasters and export GeoTIFF layers.
-- Added `tools/validate-aslo-local.R` for private, larger-scale ASLO validation without committing raw project data.
+- Added `tools/validate-aslo-local.R` for local, larger-scale ASLO validation without committing raw project data.
 - Added `tune_popmaps()` for fast leave-one-site-out tuning of geographic-distance POPMAPS parameters with fold-level diagnostics and summary metrics.
 - Added vectorized `empirical_pt_dist` tuning plus `suggest_tuning_grid()` and `adaptive_tune_popmaps()` for data-adaptive parameter exploration.
 - Added `half_distance_km` and `ten_pct_distance_km` tuning summaries plus spatial-block validation for more biologically interpretable parameter selection.
@@ -22,3 +22,10 @@
 - Added `tools/validate-example-tuning.R` for repeatable local tuning validation across empirical example datasets kept outside the package repository.
 - Added `tools/summarize-example-tuning.R` to create empirical tuning summary tables, a markdown report, and diagnostic plots.
 - Added repeated spatial-block validation with reproducible rotated spatial partitions and repeat-level uncertainty summaries.
+- Documented the scientific contract for comparing geographic-distance (`surface = "G"`) and SDM suitability-weighted least-cost (`surface = "C"`) surfaces.
+- Added `prepare_popmaps_surface()` to declare candidate raster semantics, including suitability, conductance, and resistance-to-conductance transformations.
+- Added internal least-cost distance helpers that mirror POPMAPS 1.03 `gdistance` conductance distances on small validation rasters.
+- Extended `tune_popmaps(surface = "C")` to score suitability-, conductance-, and resistance-weighted least-cost surfaces with the modern distance helper.
+- Added `compare_popmaps_surfaces()` for matched predictive comparison of user-supplied candidate surfaces.
+- Added `suggest_surface_tuning_grid()` and surface-specific defaults in `compare_popmaps_surfaces()` so geographic and least-cost surfaces can be tuned on their own distance scales.
+- Added `tools/compare-example-surfaces.R` for local empirical G-vs-SDM surface comparisons, summary tables, reports, and plots across uncommitted example datasets.

@@ -13,7 +13,9 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add spatial-block validation and biologically interpretable distance-decay summaries for tuning.
 - Add tuning diagnostics that distinguish strong parameter support from broad near-best support.
 - Add repeated spatial-block validation so parameter support can be evaluated across multiple spatial partitions.
-- Maintain private/local validation scripts for larger datasets that should not be committed.
+- Document the intended `surface = "G"` versus `surface = "C"` model-selection contract before modernizing least-cost distance code.
+- Add a surface-preparation object that records whether candidate rasters are suitability, conductance, or resistance inputs.
+- Maintain local validation scripts for larger datasets that should not be committed.
 - Keep empirical example validation repeatable from local, uncommitted `*_avg.asc` and `*.txt` files.
 - Update examples so they run quickly and do not require retired packages.
 - Add a vignette that reproduces the published workflow at a reduced raster resolution.
@@ -25,8 +27,11 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Vectorize geographic-distance calculations.
 - Reduce repeated raster extraction inside nested loops.
 - Add a single-cell or small-grid internal estimator that can be unit tested.
-- Extend parameter tuning to modernized least-cost surfaces.
+- Add internal least-cost distance helpers and validate them against the legacy `gdistance` path on small rasters.
+- Extend parameter tuning to modernized suitability-, conductance-, and resistance-weighted least-cost surfaces.
 - Evaluate `surface = "G"` and `surface = "C"` with matched validation folds, metrics, and uncertainty summaries.
+- Add candidate-surface comparison for user-supplied rasters without running upstream SDM, EEMS/FEEMS, Circuitscape, or ResistanceGA models inside `popmaps2`. `(surface-specific grid and empirical-report workflow complete)`
+- Run sensitivity checks for empirical surface comparison across raster aggregation, spatial-block repeat count, and near-best tolerance.
 - Benchmark serial and parallel execution.
 - Compare optimized results to the baseline using tolerances documented in tests.
 
@@ -35,7 +40,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Replace `raster` internals with `terra` where practical.
 - Replace `sp` objects with `sf`/matrix/data-frame interfaces where practical.
 - Replace `rgeos::gBuffer()` in plotting.
-- Identify a maintained replacement for `gdistance` least-cost workflows.
+- Identify a maintained replacement for `gdistance` least-cost workflows while preserving suitability-as-conductance behavior for SDM logistic rasters.
 
 ## Release Readiness
 

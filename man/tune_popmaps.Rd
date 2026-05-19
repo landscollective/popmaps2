@@ -8,6 +8,7 @@ tune_popmaps(
   input_raster = "",
   input_locs = "",
   surface = "G",
+  surface_values = c("suitability", "conductance", "resistance"),
   empirical_pt_dist = 5,
   num_sites = 10,
   num_tested = c(2, 3, 4, 5, 6, 7, 8),
@@ -23,20 +24,32 @@ tune_popmaps(
   dist_prob_func = function(popmod_temp, distance) {
      exp(popmod_temp * distance)
  },
+  rescale_conductance = FALSE,
+  resistance_epsilon = sqrt(.Machine$double.eps),
   quiet = TRUE
 )
 }
 \arguments{
 \item{input_raster}{A \code{terra::SpatRaster}, \code{raster::RasterLayer}, or path to
-a raster file defining the interpolation surface.}
+a raster file defining the interpolation surface. It may also be a
+\code{popmaps_surface} object returned by \code{\link[=prepare_popmaps_surface]{prepare_popmaps_surface()}}.}
 
 \item{input_locs}{A data frame or matrix with sampling location name,
 longitude, latitude, and one or more ancestry coefficient columns.}
 
-\item{surface}{Character. Currently only \code{"G"} is supported.}
+\item{surface}{Character. \code{"G"} tunes geographic-distance interpolation.
+\code{"C"} tunes suitability- or conductance-weighted least-cost interpolation
+using the modern internal distance helper.}
 
-\item{empirical_pt_dist}{Numeric vector. Minimum geographic distances, in
-kilometers, required between empirical sites selected for a prediction.}
+\item{surface_values}{Character. Meaning of raster values when
+\code{surface = "C"}. \code{"suitability"} and \code{"conductance"} use values directly;
+\code{"resistance"} converts values to conductance before distances are
+calculated. Ignored when \code{input_raster} is already a \code{popmaps_surface}
+object.}
+
+\item{empirical_pt_dist}{Numeric vector. Minimum distances required between
+empirical sites selected for a prediction. Values are kilometers for
+\code{surface = "G"} and least-cost distance units for \code{surface = "C"}.}
 
 \item{num_sites}{Integer vector. Candidate pool sizes to evaluate.}
 
@@ -72,6 +85,12 @@ repeats use random spatial rotations.}
 \item{dist_prob_func}{Function defining the relationship between distance and
 empirical-site contribution.}
 
+\item{rescale_conductance}{Logical. If \code{TRUE}, rescale conductance values to
+0-1 before least-cost distances are calculated for \code{surface = "C"}.}
+
+\item{resistance_epsilon}{Positive numeric scalar added to resistance values
+before inversion when \code{surface_values = "resistance"}.}
+
 \item{quiet}{Logical. If \code{FALSE}, print a short completion message.}
 }
 \value{
@@ -85,9 +104,9 @@ A \code{popmaps_tuning} object with:
 \description{
 \code{tune_popmaps()} compares POPMAPS parameter combinations by
 withholding empirical sampling sites, predicting ancestry coefficients from
-the remaining sites, and summarizing prediction error. This is a faster,
-more structured geographic-distance alternative to the legacy \code{jackknife()}
-workflow.
+the remaining sites, and summarizing prediction error. It supports
+geographic-distance tuning and modern least-cost tuning for prepared
+suitability, conductance, or resistance surfaces.
 }
 \examples{
 ex_raster <- raster::aggregate(hija_raster, fact = 64)

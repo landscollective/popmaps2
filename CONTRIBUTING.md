@@ -1,6 +1,6 @@
 # Contributing
 
-`popmaps2` is in private alpha while the package is stabilized and optimized.
+`popmaps2` is in development alpha while the package is stabilized and optimized.
 
 ## Development Priorities
 
