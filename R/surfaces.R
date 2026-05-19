@@ -7,9 +7,8 @@
 #' conductance-weighted surfaces (`surface = "C"`) use raster values to define
 #' relative movement or gene-flow connectivity.
 #'
-#' This helper does not yet replace the legacy `surface = "C"` modeling engine.
-#' It creates a validated surface object for the modern least-cost and
-#' candidate-surface comparison workflows.
+#' This helper creates a validated surface object for modern least-cost
+#' interpolation, tuning, and candidate-surface comparison workflows.
 #'
 #' @param input_raster A `terra::SpatRaster`, legacy `raster::RasterLayer`, or
 #'   path to a raster file.

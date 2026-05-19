@@ -105,3 +105,22 @@ test_that("popmaps accepts terra rasters and descriptive location columns", {
   expect_length(result, 2 + ncol(hija_struc) - 3)
   expect_equal(dim(result[[1]]), dim(ex_raster)[1:2])
 })
+
+test_that("popmaps preserves the legacy positional argument order", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  named <- popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    surface = "G",
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.05,
+    ncore = 1,
+    threshold = 0
+  )
+  positional <- popmaps(ex_raster, hija_struc, "G", 0, 5, 2, -0.05, 1, 0)
+
+  expect_equal(positional, named)
+})

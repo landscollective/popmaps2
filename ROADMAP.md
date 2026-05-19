@@ -28,6 +28,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Reduce repeated raster extraction inside nested loops.
 - Add a single-cell or small-grid internal estimator that can be unit tested.
 - Add internal least-cost distance helpers and validate them against the legacy `gdistance` path on small rasters.
+- Route full `popmaps(surface = "C")` interpolation through the internal least-cost helper while preserving POPMAPS 1.03 suitability-as-conductance behavior.
 - Extend parameter tuning to modernized suitability-, conductance-, and resistance-weighted least-cost surfaces.
 - Evaluate `surface = "G"` and `surface = "C"` with matched validation folds, metrics, and uncertainty summaries.
 - Add candidate-surface comparison for user-supplied rasters without running upstream SDM, EEMS/FEEMS, Circuitscape, or ResistanceGA models inside `popmaps2`. `(surface-specific grid and empirical-report workflow complete)`
@@ -40,7 +41,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Replace `raster` internals with `terra` where practical.
 - Replace `sp` objects with `sf`/matrix/data-frame interfaces where practical.
 - Replace `rgeos::gBuffer()` in plotting.
-- Identify a maintained replacement for `gdistance` least-cost workflows while preserving suitability-as-conductance behavior for SDM logistic rasters.
+- Finish replacing `gdistance` in remaining legacy compatibility paths, especially `jackknife(surface = "C")`.
 
 ## Release Readiness
 

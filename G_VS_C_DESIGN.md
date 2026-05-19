@@ -1,9 +1,8 @@
 # Geographic vs. Suitability-Weighted Surfaces
 
 This note records the intended scientific meaning of `surface = "G"` and
-`surface = "C"` before the `surface = "C"` engine is modernized. The goal is to
-preserve the flexibility of POPMAPS 1.03 while making the model-choice workflow
-more explicit, faster, and easier to validate.
+`surface = "C"`. The goal is to preserve the flexibility of POPMAPS 1.03 while
+making the model-choice workflow more explicit, faster, and easier to validate.
 
 ## Scientific Purpose
 
@@ -24,7 +23,7 @@ or performance problem. It is central to testing whether genetic patterns are
 shaped by isolation by distance, isolation by environment, habitat-mediated gene
 flow, or similar landscape processes.
 
-## Current POPMAPS 1.03 Behavior
+## POPMAPS 1.03 Behavior Preserved By Default
 
 The legacy implementation builds `surface = "C"` distances with:
 
@@ -129,8 +128,8 @@ The modern `surface = "C"` implementation should:
   `empirical_pt_dist`;
 - validate that conductance values are finite and non-negative, with a clear
   handling rule for zeros and missing cells;
-- compare a small modern least-cost distance matrix against the legacy
-  `gdistance` result before replacing the old engine;
+- compare modern least-cost distance and small-grid ancestry outputs against the
+  legacy `gdistance` result;
 - keep `threshold` as an output/prediction mask unless the user explicitly asks
   for thresholded cells to become movement barriers;
 - record the surface type and any transformation in tuning outputs so reports
@@ -189,7 +188,7 @@ avoids silently turning a suitability threshold into a biological wall.
 2. Add a modern internal least-cost distance helper that returns cell-site and
    site-site distance matrices. `(initial helper added)`
 3. Extend `popmaps(surface = "C")` to use the modern helper while preserving
-   POPMAPS 1.03 behavior.
+   POPMAPS 1.03 behavior. `(complete for the main popmaps path)`
 4. Extend `tune_popmaps(surface = "C")` so tuning can compare `G` and `C` with
    matched folds and repeated spatial blocks. `(initial support added)`
 5. Add a candidate-surface comparison wrapper for user-supplied surfaces.

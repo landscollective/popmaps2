@@ -55,9 +55,8 @@ surfaces (\code{surface = "G"}) use only the raster geometry. Suitability- or
 conductance-weighted surfaces (\code{surface = "C"}) use raster values to define
 relative movement or gene-flow connectivity.
 
-This helper does not yet replace the legacy \code{surface = "C"} modeling engine.
-It creates a validated surface object for the modern least-cost and
-candidate-surface comparison workflows.
+This helper creates a validated surface object for modern least-cost
+interpolation, tuning, and candidate-surface comparison workflows.
 }
 \examples{
 geographic <- prepare_popmaps_surface(hija_raster, surface = "G")
