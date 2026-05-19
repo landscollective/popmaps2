@@ -130,6 +130,12 @@ format. Running SDMs, EEMS/FEEMS, Circuitscape, or ResistanceGA remains outside
 the core scope of `popmaps2`; the package focuses on using candidate surfaces to
 interpolate ancestry and compare predictive support.
 
+`tune_popmaps(surface = "C")` can now tune against suitability, conductance, or
+resistance rasters with the internal least-cost distance helper. For `surface =
+"C"`, tuning distances are relative cost-distance units rather than geographic
+kilometers, so decay summaries should be interpreted as surface-specific
+distance scales.
+
 ### 2. Empirical Genetic Locations
 
 `input_locs` must be a data frame with this structure:
@@ -464,10 +470,11 @@ Completed:
   modeling.
 - add internal least-cost distance helpers that match the legacy `gdistance`
   path on small validation rasters.
+- extend `tune_popmaps()` to suitability-, conductance-, and
+  resistance-weighted least-cost surfaces.
 
 Planned improvements:
 
-- extend `tune_popmaps()` to suitability-weighted least-cost surfaces after the `surface = "C"` engine is modernized;
 - replace `gdistance` least-cost routines with a maintained alternative while preserving the original suitability-as-conductance behavior;
 - compare `surface = "G"` and `surface = "C"` with the same validation metrics and uncertainty diagnostics;
 - replace `raster`, `sp`, and `rgeos` plotting internals with `terra` and `sf`;

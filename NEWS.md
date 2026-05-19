@@ -25,3 +25,4 @@
 - Documented the scientific contract for comparing geographic-distance (`surface = "G"`) and SDM suitability-weighted least-cost (`surface = "C"`) surfaces.
 - Added `prepare_popmaps_surface()` to declare candidate raster semantics, including suitability, conductance, and resistance-to-conductance transformations.
 - Added internal least-cost distance helpers that mirror POPMAPS 1.03 `gdistance` conductance distances on small validation rasters.
+- Extended `tune_popmaps(surface = "C")` to score suitability-, conductance-, and resistance-weighted least-cost surfaces with the modern distance helper.

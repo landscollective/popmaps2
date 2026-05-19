@@ -39,22 +39,86 @@ test_that("tune_popmaps validates unsupported and impossible tuning requests", {
     tune_popmaps(
       input_raster = ex_raster,
       input_locs = hija_struc,
-      surface = "C",
-      quiet = TRUE
-    ),
-    "surface = 'G'"
-  )
-
-  expect_error(
-    tune_popmaps(
-      input_raster = ex_raster,
-      input_locs = hija_struc,
       num_sites = 2,
       num_tested = 3,
       quiet = TRUE
     ),
     "num_tested <= num_sites"
   )
+})
+
+test_that("tune_popmaps supports suitability-weighted least-cost validation", {
+  surface_rast <- terra::rast(nrows = 4, ncols = 4, xmin = 0, xmax = 4, ymin = 0, ymax = 4)
+  terra::values(surface_rast) <- c(
+    1, 1, 1, 1,
+    1, 2, 2, 1,
+    1, 2, 2, 1,
+    1, 1, 1, 1
+  )
+  locs <- data.frame(
+    site = paste0("s", 1:4),
+    lon = c(0.5, 3.5, 0.5, 3.5),
+    lat = c(0.5, 0.5, 3.5, 3.5),
+    axis1 = c(0.9, 0.8, 0.2, 0.1),
+    axis2 = c(0.1, 0.2, 0.8, 0.9)
+  )
+
+  tuning <- tune_popmaps(
+    input_raster = surface_rast,
+    input_locs = locs,
+    surface = "C",
+    surface_values = "suitability",
+    empirical_pt_dist = c(0, 1),
+    num_sites = 3,
+    num_tested = 2,
+    popmod = c(-0.1, -0.2),
+    quiet = TRUE
+  )
+
+  expect_s3_class(tuning, "popmaps_tuning")
+  expect_equal(nrow(tuning$results), 4)
+  expect_equal(nrow(tuning$folds), 4 * nrow(locs))
+  expect_true(all(tuning$results$distance_units == "cost_distance"))
+  expect_true(all(is.finite(tuning$results$rmse)))
+  expect_true(all(tuning$results$failed_folds == 0))
+})
+
+test_that("tune_popmaps accepts prepared resistance surfaces", {
+  resistance_rast <- terra::rast(nrows = 4, ncols = 4, xmin = 0, xmax = 4, ymin = 0, ymax = 4)
+  terra::values(resistance_rast) <- c(
+    4, 4, 4, 4,
+    4, 1, 1, 4,
+    4, 1, 1, 4,
+    4, 4, 4, 4
+  )
+  locs <- data.frame(
+    site = paste0("s", 1:4),
+    lon = c(0.5, 3.5, 0.5, 3.5),
+    lat = c(0.5, 0.5, 3.5, 3.5),
+    axis1 = c(0.9, 0.8, 0.2, 0.1),
+    axis2 = c(0.1, 0.2, 0.8, 0.9)
+  )
+  surface <- prepare_popmaps_surface(
+    resistance_rast,
+    surface = "C",
+    surface_values = "resistance",
+    resistance_epsilon = 0.5
+  )
+
+  tuning <- tune_popmaps(
+    input_raster = surface,
+    input_locs = locs,
+    surface = "C",
+    empirical_pt_dist = 0,
+    num_sites = 3,
+    num_tested = 2,
+    popmod = -0.1,
+    quiet = TRUE
+  )
+
+  expect_equal(nrow(tuning$results), 1)
+  expect_equal(tuning$results$distance_units, "cost_distance")
+  expect_true(is.finite(tuning$results$rmse))
 })
 
 test_that("tune_popmaps supports spatial-block validation", {

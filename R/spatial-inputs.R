@@ -7,10 +7,11 @@ popmaps_prepare_inputs <- function(input_raster,
                                    ncore = NULL,
                                    empirical_pt_dist = NULL,
                                    popmod = NULL,
-                                   jackknife = FALSE) {
+                                   jackknife = FALSE,
+                                   require_legacy_c = TRUE) {
   surface <- match.arg(surface)
 
-  if (surface == "C" && !requireNamespace("gdistance", quietly = TRUE)) {
+  if (surface == "C" && isTRUE(require_legacy_c) && !requireNamespace("gdistance", quietly = TRUE)) {
     stop("The 'gdistance' package is required when surface = 'C'.", call. = FALSE)
   }
 

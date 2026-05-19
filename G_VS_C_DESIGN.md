@@ -188,7 +188,7 @@ avoids silently turning a suitability threshold into a biological wall.
 3. Extend `popmaps(surface = "C")` to use the modern helper while preserving
    POPMAPS 1.03 behavior.
 4. Extend `tune_popmaps(surface = "C")` so tuning can compare `G` and `C` with
-   matched folds and repeated spatial blocks.
+   matched folds and repeated spatial blocks. `(initial support added)`
 5. Run the empirical examples with `G` and each available SDM-based `C` surface.
 6. Summarize whether each species supports `G`, `C`, indistinguishable models,
    or unstable support.

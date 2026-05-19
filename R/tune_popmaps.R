@@ -2,17 +2,26 @@
 #'
 #' @description `tune_popmaps()` compares POPMAPS parameter combinations by
 #'   withholding empirical sampling sites, predicting ancestry coefficients from
-#'   the remaining sites, and summarizing prediction error. This is a faster,
-#'   more structured geographic-distance alternative to the legacy `jackknife()`
-#'   workflow.
+#'   the remaining sites, and summarizing prediction error. It supports
+#'   geographic-distance tuning and modern least-cost tuning for prepared
+#'   suitability, conductance, or resistance surfaces.
 #'
 #' @param input_raster A `terra::SpatRaster`, `raster::RasterLayer`, or path to
-#'   a raster file defining the interpolation surface.
+#'   a raster file defining the interpolation surface. It may also be a
+#'   `popmaps_surface` object returned by [prepare_popmaps_surface()].
 #' @param input_locs A data frame or matrix with sampling location name,
 #'   longitude, latitude, and one or more ancestry coefficient columns.
-#' @param surface Character. Currently only `"G"` is supported.
-#' @param empirical_pt_dist Numeric vector. Minimum geographic distances, in
-#'   kilometers, required between empirical sites selected for a prediction.
+#' @param surface Character. `"G"` tunes geographic-distance interpolation.
+#'   `"C"` tunes suitability- or conductance-weighted least-cost interpolation
+#'   using the modern internal distance helper.
+#' @param surface_values Character. Meaning of raster values when
+#'   `surface = "C"`. `"suitability"` and `"conductance"` use values directly;
+#'   `"resistance"` converts values to conductance before distances are
+#'   calculated. Ignored when `input_raster` is already a `popmaps_surface`
+#'   object.
+#' @param empirical_pt_dist Numeric vector. Minimum distances required between
+#'   empirical sites selected for a prediction. Values are kilometers for
+#'   `surface = "G"` and least-cost distance units for `surface = "C"`.
 #' @param num_sites Integer vector. Candidate pool sizes to evaluate.
 #' @param num_tested Integer vector. Numbers of empirical sites used to estimate
 #'   ancestry coefficients.
@@ -36,6 +45,10 @@
 #' @param primary_metric Metric used to select the best parameter combination.
 #' @param dist_prob_func Function defining the relationship between distance and
 #'   empirical-site contribution.
+#' @param rescale_conductance Logical. If `TRUE`, rescale conductance values to
+#'   0-1 before least-cost distances are calculated for `surface = "C"`.
+#' @param resistance_epsilon Positive numeric scalar added to resistance values
+#'   before inversion when `surface_values = "resistance"`.
 #' @param quiet Logical. If `FALSE`, print a short completion message.
 #'
 #' @return A `popmaps_tuning` object with:
@@ -65,6 +78,7 @@
 tune_popmaps <- function(input_raster = "",
                          input_locs = "",
                          surface = "G",
+                         surface_values = c("suitability", "conductance", "resistance"),
                          empirical_pt_dist = 5,
                          num_sites = 10,
                          num_tested = c(2, 3, 4, 5, 6, 7, 8),
@@ -81,19 +95,19 @@ tune_popmaps <- function(input_raster = "",
                          dist_prob_func = function(popmod_temp, distance) {
                            exp(popmod_temp * distance)
                          },
+                         rescale_conductance = FALSE,
+                         resistance_epsilon = sqrt(.Machine$double.eps),
                          quiet = TRUE) {
   surface <- match.arg(surface, c("G", "C"))
+  surface_values <- match.arg(surface_values)
   validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
 
-  if (surface != "G") {
-    stop(
-      "`tune_popmaps()` currently supports only geographic-distance tuning with surface = 'G'.",
-      call. = FALSE
-    )
-  }
   if (!is.function(dist_prob_func)) {
     stop("`dist_prob_func` must be a function.", call. = FALSE)
+  }
+  if (!is.logical(rescale_conductance) || length(rescale_conductance) != 1 || is.na(rescale_conductance)) {
+    stop("`rescale_conductance` must be `TRUE` or `FALSE`.", call. = FALSE)
   }
 
   num_sites <- popmaps_check_tuning_values(
@@ -140,6 +154,9 @@ tune_popmaps <- function(input_raster = "",
     spatial_block_seed = spatial_block_seed,
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
+    surface_values = surface_values,
+    rescale_conductance = rescale_conductance,
+    resistance_epsilon = resistance_epsilon,
     quiet = quiet,
     call = match.call()
   )
@@ -697,24 +714,48 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
                                          spatial_block_seed,
                                          primary_metric,
                                          dist_prob_func,
+                                         surface_values = "suitability",
+                                         rescale_conductance = FALSE,
+                                         resistance_epsilon = sqrt(.Machine$double.eps),
                                          quiet,
                                          call,
                                          class = "popmaps_tuning",
                                          search = NULL) {
+  if (inherits(input_raster, "popmaps_surface")) {
+    surface_object <- input_raster
+    if (!identical(surface_object$surface, surface)) {
+      stop("`input_raster` surface metadata does not match `surface`.", call. = FALSE)
+    }
+    prepare_raster <- surface_object$rast
+  } else {
+    surface_object <- NULL
+    prepare_raster <- input_raster
+  }
+
   prepared <- popmaps_prepare_inputs(
-    input_raster = input_raster,
+    input_raster = prepare_raster,
     input_locs = input_locs,
     surface = surface,
     num_sites = max(parameter_grid$num_sites),
     num_tested = max(parameter_grid$num_tested),
     threshold = threshold,
     empirical_pt_dist = max(parameter_grid$empirical_pt_dist),
-    jackknife = TRUE
+    jackknife = TRUE,
+    require_legacy_c = FALSE
   )
 
   locations <- prepared$locations
   coords <- as.matrix(locations[, 2:3, drop = FALSE])
   raster_values <- popmaps_extract_tuning_values(prepared$rast, coords)
+  distance_context <- popmaps_prepare_tuning_distance_context(
+    surface = surface,
+    surface_object = surface_object,
+    prepared = prepared,
+    coords = coords,
+    surface_values = surface_values,
+    rescale_conductance = rescale_conductance,
+    resistance_epsilon = resistance_epsilon
+  )
   axis_count <- ncol(locations) - 3
   validation_folds <- popmaps_make_validation_folds(
     locations = locations,
@@ -736,7 +777,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
 
     for (validation_fold in validation_folds) {
       for (site_idx in validation_fold$assessment_idx) {
-        prediction <- popmaps_predict_site_geographic(
+        prediction <- popmaps_predict_site_tuning(
           site_idx = site_idx,
           training_idx = validation_fold$analysis_idx,
           locations = locations,
@@ -746,7 +787,8 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
           num_sites = combo$num_sites,
           num_tested = combo$num_tested,
           popmod = combo$popmod,
-          dist_prob_func = dist_prob_func
+          dist_prob_func = dist_prob_func,
+          distance_context = distance_context
         )
 
         fold_rows[[fold_idx]] <- popmaps_tuning_fold_row(
@@ -756,7 +798,8 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
           site_idx = site_idx,
           site = as.character(locations$V1[site_idx]),
           prediction = prediction,
-          axis_count = axis_count
+          axis_count = axis_count,
+          distance_units = distance_context$distance_units
         )
         fold_idx <- fold_idx + 1
       }
@@ -1267,6 +1310,91 @@ popmaps_extract_tuning_values <- function(rast, coords) {
   as.numeric(extracted)
 }
 
+popmaps_prepare_tuning_distance_context <- function(surface,
+                                                    surface_object,
+                                                    prepared,
+                                                    coords,
+                                                    surface_values,
+                                                    rescale_conductance,
+                                                    resistance_epsilon) {
+  if (surface == "G") {
+    return(list(
+      surface = "G",
+      distance_units = "km",
+      site_distances = popmaps_empirical_site_distances(coords)
+    ))
+  }
+
+  if (is.null(surface_object)) {
+    surface_object <- prepare_popmaps_surface(
+      input_raster = prepared$rast,
+      surface = "C",
+      surface_values = surface_values,
+      rescale_conductance = rescale_conductance,
+      resistance_epsilon = resistance_epsilon
+    )
+  }
+
+  graph <- popmaps_cost_distance_graph(surface_object, directions = 8)
+  site_distances <- tryCatch(
+    popmaps_cost_distance_matrix(
+      surface = surface_object,
+      from_coords = coords,
+      directions = 8,
+      graph = graph
+    ),
+    error = function(err) {
+      stop(
+        "Could not calculate least-cost distances for empirical sites: ",
+        conditionMessage(err),
+        call. = FALSE
+      )
+    }
+  )
+
+  list(
+    surface = "C",
+    distance_units = "cost_distance",
+    site_distances = site_distances,
+    graph = graph,
+    surface_object = surface_object
+  )
+}
+
+popmaps_predict_site_tuning <- function(site_idx,
+                                        training_idx = NULL,
+                                        locations,
+                                        raster_value,
+                                        threshold,
+                                        empirical_pt_dist,
+                                        num_sites,
+                                        num_tested,
+                                        popmod,
+                                        dist_prob_func,
+                                        distance_context) {
+  if (is.null(training_idx)) {
+    training_idx <- setdiff(seq_len(nrow(locations)), site_idx)
+  }
+
+  site_distances <- distance_context$site_distances[site_idx, training_idx]
+  empirical_distances <- distance_context$site_distances[training_idx, training_idx, drop = FALSE]
+
+  popmaps_predict_site_from_distances(
+    site_idx = site_idx,
+    training_idx = training_idx,
+    locations = locations,
+    raster_value = raster_value,
+    threshold = threshold,
+    empirical_pt_dist = empirical_pt_dist,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    popmod = popmod,
+    dist_prob_func = dist_prob_func,
+    site_distances = site_distances,
+    empirical_distances = empirical_distances
+  )
+}
+
 popmaps_predict_site_geographic <- function(site_idx,
                                             training_idx = NULL,
                                             locations,
@@ -1277,11 +1405,49 @@ popmaps_predict_site_geographic <- function(site_idx,
                                             num_tested,
                                             popmod,
                                             dist_prob_func) {
-  axis_cols <- seq.int(4, ncol(locations))
-  observed <- popmaps_normalize_probability(as.numeric(locations[site_idx, axis_cols]))
   if (is.null(training_idx)) {
     training_idx <- setdiff(seq_len(nrow(locations)), site_idx)
   }
+  training <- locations[training_idx, , drop = FALSE]
+  training_coords <- as.matrix(training[, 2:3, drop = FALSE])
+  site_distances <- popmaps_earth_dist(
+    lat1 = locations$V3[site_idx],
+    long1 = locations$V2[site_idx],
+    lat2 = training$V3,
+    long2 = training$V2
+  )
+  empirical_distances <- popmaps_empirical_site_distances(training_coords)
+
+  popmaps_predict_site_from_distances(
+    site_idx = site_idx,
+    training_idx = training_idx,
+    locations = locations,
+    raster_value = raster_value,
+    threshold = threshold,
+    empirical_pt_dist = empirical_pt_dist,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    popmod = popmod,
+    dist_prob_func = dist_prob_func,
+    site_distances = site_distances,
+    empirical_distances = empirical_distances
+  )
+}
+
+popmaps_predict_site_from_distances <- function(site_idx,
+                                                training_idx,
+                                                locations,
+                                                raster_value,
+                                                threshold,
+                                                empirical_pt_dist,
+                                                num_sites,
+                                                num_tested,
+                                                popmod,
+                                                dist_prob_func,
+                                                site_distances,
+                                                empirical_distances) {
+  axis_cols <- seq.int(4, ncol(locations))
+  observed <- popmaps_normalize_probability(as.numeric(locations[site_idx, axis_cols]))
 
   if (any(is.na(observed))) {
     return(popmaps_failed_tuning_prediction(
@@ -1314,18 +1480,18 @@ popmaps_predict_site_geographic <- function(site_idx,
     ))
   }
 
+  reachable_sites <- which(is.finite(site_distances))
+  if (length(reachable_sites) < num_sites) {
+    return(popmaps_failed_tuning_prediction(
+      observed = observed,
+      message = "Validation fold has fewer reachable training sites than `num_sites`."
+    ))
+  }
+
   training <- locations[training_idx, , drop = FALSE]
-  training_coords <- as.matrix(training[, 2:3, drop = FALSE])
   training_ancestry <- as.matrix(training[, axis_cols, drop = FALSE])
 
-  site_distances <- popmaps_earth_dist(
-    lat1 = locations$V3[site_idx],
-    long1 = locations$V2[site_idx],
-    lat2 = training$V3,
-    long2 = training$V2
-  )
-  candidate_sites <- order(site_distances)[seq_len(num_sites)]
-  empirical_distances <- popmaps_empirical_site_distances(training_coords)
+  candidate_sites <- reachable_sites[order(site_distances[reachable_sites])][seq_len(num_sites)]
 
   selected_sites <- tryCatch(
     popmaps_select_empirical_sites(
@@ -1422,7 +1588,8 @@ popmaps_tuning_fold_row <- function(combo,
                                     site_idx,
                                     site,
                                     prediction,
-                                    axis_count) {
+                                    axis_count,
+                                    distance_units = "km") {
   predicted_names <- paste0("predicted_axis_", seq_len(axis_count))
   observed_names <- paste0("observed_axis_", seq_len(axis_count))
 
@@ -1441,6 +1608,7 @@ popmaps_tuning_fold_row <- function(combo,
       popmod = combo$popmod,
       half_distance_km = popmaps_decay_distance(combo$popmod, 0.5),
       ten_pct_distance_km = popmaps_decay_distance(combo$popmod, 0.1),
+      distance_units = distance_units,
       empirical_pt_dist = combo$empirical_pt_dist,
       mae = prediction$metrics[["mae"]],
       rmse = prediction$metrics[["rmse"]],
@@ -1508,6 +1676,7 @@ popmaps_summarize_tuning_results <- function(folds) {
       popmod = first$popmod,
       half_distance_km = first$half_distance_km,
       ten_pct_distance_km = first$ten_pct_distance_km,
+      distance_units = first$distance_units,
       empirical_pt_dist = first$empirical_pt_dist,
       n_validation_repeats = length(unique(folds$repeat_id[idx])),
       n_validation_folds = length(unique(folds$fold_id[idx])),

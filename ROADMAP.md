@@ -28,7 +28,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Reduce repeated raster extraction inside nested loops.
 - Add a single-cell or small-grid internal estimator that can be unit tested.
 - Add internal least-cost distance helpers and validate them against the legacy `gdistance` path on small rasters.
-- Extend parameter tuning to modernized suitability-weighted least-cost surfaces.
+- Extend parameter tuning to modernized suitability-, conductance-, and resistance-weighted least-cost surfaces.
 - Evaluate `surface = "G"` and `surface = "C"` with matched validation folds, metrics, and uncertainty summaries.
 - Add candidate-surface comparison for user-supplied rasters without running upstream SDM, EEMS/FEEMS, Circuitscape, or ResistanceGA models inside `popmaps2`.
 - Benchmark serial and parallel execution.
