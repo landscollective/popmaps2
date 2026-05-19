@@ -24,3 +24,4 @@
 - Added repeated spatial-block validation with reproducible rotated spatial partitions and repeat-level uncertainty summaries.
 - Documented the scientific contract for comparing geographic-distance (`surface = "G"`) and SDM suitability-weighted least-cost (`surface = "C"`) surfaces.
 - Added `prepare_popmaps_surface()` to declare candidate raster semantics, including suitability, conductance, and resistance-to-conductance transformations.
+- Added internal least-cost distance helpers that mirror POPMAPS 1.03 `gdistance` conductance distances on small validation rasters.

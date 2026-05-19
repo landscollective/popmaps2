@@ -182,9 +182,9 @@ avoids silently turning a suitability threshold into a biological wall.
 ## Validation Plan
 
 1. Add tiny test rasters where expected `C` distances can be verified against
-   `gdistance`.
+   `gdistance`. `(initial helper tests added)`
 2. Add a modern internal least-cost distance helper that returns cell-site and
-   site-site distance matrices.
+   site-site distance matrices. `(initial helper added)`
 3. Extend `popmaps(surface = "C")` to use the modern helper while preserving
    POPMAPS 1.03 behavior.
 4. Extend `tune_popmaps(surface = "C")` so tuning can compare `G` and `C` with
