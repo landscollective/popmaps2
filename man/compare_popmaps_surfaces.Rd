@@ -7,10 +7,10 @@
 compare_popmaps_surfaces(
   input_locs,
   surfaces,
-  empirical_pt_dist = 5,
-  num_sites = 10,
-  num_tested = c(2, 3, 4, 5, 6, 7, 8),
-  popmod = c(-0.001, -0.01, -0.05, -0.1, -0.15),
+  empirical_pt_dist = NULL,
+  num_sites = NULL,
+  num_tested = NULL,
+  popmod = NULL,
   threshold = 0,
   validation = c("loo", "spatial_block"),
   n_blocks = 4,
@@ -22,6 +22,7 @@ compare_popmaps_surfaces(
   dist_prob_func = function(popmod_temp, distance) {
      exp(popmod_temp * distance)
  },
+  surface_grid = c("surface_specific", "shared"),
   near_best_tolerance = 0.05,
   quiet = TRUE
 )
@@ -74,6 +75,11 @@ repeats use random spatial rotations.}
 \item{dist_prob_func}{Function defining the relationship between distance and
 empirical-site contribution.}
 
+\item{surface_grid}{Character. \code{"surface_specific"} derives \code{popmod} and
+\code{empirical_pt_dist} from distances measured over each candidate surface
+when either argument is \code{NULL}. \code{"shared"} derives missing values from
+geographic sampling-site distances and uses them for every surface.}
+
 \item{near_best_tolerance}{Non-negative relative tolerance for labeling
 surfaces as statistically near-best. The default keeps surfaces within 5\%
 of the best primary metric score.}
@@ -88,6 +94,7 @@ A \code{popmaps_surface_comparison} object with:
 \item{near_best}{Surfaces within \code{near_best_tolerance} of the best score.}
 \item{support}{One-row conservative interpretation of surface support.}
 \item{tunings}{Named list of \code{popmaps_tuning} objects, one per surface.}
+\item{grids}{Named list of surface-specific tuning grids used for the comparison.}
 }
 }
 \description{

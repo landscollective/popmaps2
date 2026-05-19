@@ -15,6 +15,10 @@
 #'   with `input_raster` or `raster`, `surface`, and optional
 #'   `surface_values`, `mask`, `barrier`, `rescale_conductance`, and
 #'   `resistance_epsilon` entries.
+#' @param surface_grid Character. `"surface_specific"` derives `popmod` and
+#'   `empirical_pt_dist` from distances measured over each candidate surface
+#'   when either argument is `NULL`. `"shared"` derives missing values from
+#'   geographic sampling-site distances and uses them for every surface.
 #' @param near_best_tolerance Non-negative relative tolerance for labeling
 #'   surfaces as statistically near-best. The default keeps surfaces within 5%
 #'   of the best primary metric score.
@@ -27,6 +31,7 @@
 #'   \item{near_best}{Surfaces within `near_best_tolerance` of the best score.}
 #'   \item{support}{One-row conservative interpretation of surface support.}
 #'   \item{tunings}{Named list of `popmaps_tuning` objects, one per surface.}
+#'   \item{grids}{Named list of surface-specific tuning grids used for the comparison.}
 #' }
 #'
 #' @examples
@@ -61,10 +66,10 @@
 #' @export
 compare_popmaps_surfaces <- function(input_locs,
                                      surfaces,
-                                     empirical_pt_dist = 5,
-                                     num_sites = 10,
-                                     num_tested = c(2, 3, 4, 5, 6, 7, 8),
-                                     popmod = c(-0.001, -0.01, -0.05, -0.1, -0.15),
+                                     empirical_pt_dist = NULL,
+                                     num_sites = NULL,
+                                     num_tested = NULL,
+                                     popmod = NULL,
                                      threshold = 0,
                                      validation = c("loo", "spatial_block"),
                                      n_blocks = 4,
@@ -77,10 +82,12 @@ compare_popmaps_surfaces <- function(input_locs,
                                      dist_prob_func = function(popmod_temp, distance) {
                                        exp(popmod_temp * distance)
                                      },
+                                     surface_grid = c("surface_specific", "shared"),
                                      near_best_tolerance = 0.05,
                                      quiet = TRUE) {
   validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
+  surface_grid <- match.arg(surface_grid)
   if (!is.function(dist_prob_func)) {
     stop("`dist_prob_func` must be a function.", call. = FALSE)
   }
@@ -100,17 +107,28 @@ compare_popmaps_surfaces <- function(input_locs,
   }
 
   tunings <- vector("list", length(surface_specs))
+  grids <- vector("list", length(surface_specs))
   names(tunings) <- names(surface_specs)
+  names(grids) <- names(surface_specs)
   for (surface_name in names(surface_specs)) {
     surface_object <- surface_specs[[surface_name]]
+    grids[[surface_name]] <- popmaps_resolve_comparison_grid(
+      input_locs = input_locs,
+      surface_object = surface_object,
+      num_sites = num_sites,
+      num_tested = num_tested,
+      popmod = popmod,
+      empirical_pt_dist = empirical_pt_dist,
+      surface_grid = surface_grid
+    )
     tunings[[surface_name]] <- tune_popmaps(
       input_raster = surface_object,
       input_locs = input_locs,
       surface = surface_object$surface,
-      empirical_pt_dist = empirical_pt_dist,
-      num_sites = num_sites,
-      num_tested = num_tested,
-      popmod = popmod,
+      empirical_pt_dist = grids[[surface_name]]$empirical_pt_dist,
+      num_sites = grids[[surface_name]]$num_sites,
+      num_tested = grids[[surface_name]]$num_tested,
+      popmod = grids[[surface_name]]$popmod,
       threshold = threshold,
       validation = validation,
       n_blocks = n_blocks,
@@ -148,8 +166,10 @@ compare_popmaps_surfaces <- function(input_locs,
     near_best = near_best,
     support = support,
     tunings = tunings,
+    grids = grids,
     primary_metric = primary_metric,
     validation = validation,
+    surface_grid = surface_grid,
     near_best_tolerance = near_best_tolerance,
     spatial_block_seed = spatial_block_seed,
     call = match.call()
@@ -167,6 +187,48 @@ compare_popmaps_surfaces <- function(input_locs,
   }
 
   comparison
+}
+
+popmaps_resolve_comparison_grid <- function(input_locs,
+                                            surface_object,
+                                            num_sites,
+                                            num_tested,
+                                            popmod,
+                                            empirical_pt_dist,
+                                            surface_grid) {
+  suggested <- if (surface_grid == "surface_specific") {
+    suggest_surface_tuning_grid(
+      input_raster = surface_object,
+      input_locs = input_locs,
+      surface = surface_object$surface,
+      surface_values = surface_object$surface_values,
+      num_sites = num_sites,
+      num_tested = num_tested
+    )
+  } else {
+    suggest_tuning_grid(
+      input_locs = input_locs,
+      num_sites = num_sites,
+      num_tested = num_tested
+    )
+  }
+
+  suggested$popmod <- if (is.null(popmod)) {
+    suggested$popmod
+  } else {
+    popmaps_check_tuning_values(popmod, "`popmod`")
+  }
+  suggested$empirical_pt_dist <- if (is.null(empirical_pt_dist)) {
+    suggested$empirical_pt_dist
+  } else {
+    popmaps_check_tuning_values(
+      empirical_pt_dist,
+      "`empirical_pt_dist`",
+      nonnegative = TRUE
+    )
+  }
+
+  suggested
 }
 
 #' @export

@@ -30,7 +30,8 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add internal least-cost distance helpers and validate them against the legacy `gdistance` path on small rasters.
 - Extend parameter tuning to modernized suitability-, conductance-, and resistance-weighted least-cost surfaces.
 - Evaluate `surface = "G"` and `surface = "C"` with matched validation folds, metrics, and uncertainty summaries.
-- Add candidate-surface comparison for user-supplied rasters without running upstream SDM, EEMS/FEEMS, Circuitscape, or ResistanceGA models inside `popmaps2`. `(initial wrapper complete)`
+- Add candidate-surface comparison for user-supplied rasters without running upstream SDM, EEMS/FEEMS, Circuitscape, or ResistanceGA models inside `popmaps2`. `(surface-specific grid and empirical-report workflow complete)`
+- Run sensitivity checks for empirical surface comparison across raster aggregation, spatial-block repeat count, and near-best tolerance.
 - Benchmark serial and parallel execution.
 - Compare optimized results to the baseline using tolerances documented in tests.
 

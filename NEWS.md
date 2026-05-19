@@ -27,3 +27,5 @@
 - Added internal least-cost distance helpers that mirror POPMAPS 1.03 `gdistance` conductance distances on small validation rasters.
 - Extended `tune_popmaps(surface = "C")` to score suitability-, conductance-, and resistance-weighted least-cost surfaces with the modern distance helper.
 - Added `compare_popmaps_surfaces()` for matched predictive comparison of user-supplied candidate surfaces.
+- Added `suggest_surface_tuning_grid()` and surface-specific defaults in `compare_popmaps_surfaces()` so geographic and least-cost surfaces can be tuned on their own distance scales.
+- Added `tools/compare-example-surfaces.R` for local empirical G-vs-SDM surface comparisons, summary tables, reports, and plots across uncommitted example datasets.

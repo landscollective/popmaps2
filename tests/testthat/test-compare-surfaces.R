@@ -43,7 +43,7 @@ test_that("compare_popmaps_surfaces ranks prepared and specified surfaces", {
     comparison,
     c(
       "summary", "best", "near_best", "support", "tunings",
-      "primary_metric", "validation", "near_best_tolerance",
+      "grids", "primary_metric", "validation", "surface_grid", "near_best_tolerance",
       "spatial_block_seed", "call"
     )
   )
@@ -56,6 +56,39 @@ test_that("compare_popmaps_surfaces ranks prepared and specified surfaces", {
   expect_equal(nrow(comparison$best), 1)
   expect_true(comparison$best$surface_name %in% comparison$summary$surface_name)
   expect_true(comparison$support$n_near_best >= 1)
+})
+
+test_that("compare_popmaps_surfaces can suggest surface-specific distance grids", {
+  fixture <- surface_comparison_fixture()
+  surfaces <- list(
+    geographic = prepare_popmaps_surface(fixture$raster, surface = "G"),
+    suitability = prepare_popmaps_surface(
+      fixture$raster,
+      surface = "C",
+      surface_values = "suitability"
+    )
+  )
+
+  comparison <- compare_popmaps_surfaces(
+    input_locs = fixture$locs,
+    surfaces = surfaces,
+    num_sites = 3,
+    num_tested = 2,
+    validation = "loo",
+    quiet = TRUE
+  )
+
+  expect_equal(comparison$surface_grid, "surface_specific")
+  expect_equal(comparison$grids$geographic$distance_units, "km")
+  expect_equal(comparison$grids$suitability$distance_units, "cost_distance")
+  expect_equal(
+    sort(unique(comparison$tunings$geographic$results$popmod)),
+    comparison$grids$geographic$popmod
+  )
+  expect_equal(
+    sort(unique(comparison$tunings$suitability$results$popmod)),
+    comparison$grids$suitability$popmod
+  )
 })
 
 test_that("compare_popmaps_surfaces uses matched repeated spatial blocks", {

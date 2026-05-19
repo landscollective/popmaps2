@@ -87,11 +87,14 @@ For each species, `popmaps2` should be able to compare:
 - eventually, multiple candidate `C` surfaces or transformations when users have
   competing hypotheses about habitat, environment, dispersal, or resistance.
 
-The comparison should use matched validation folds, identical candidate
-parameter grids where possible, and the same primary metric. Repeated
-spatial-block validation is especially important because it asks whether the
-selected surface predicts across space, not only whether it interpolates well at
-nearby leave-one-out sites.
+The comparison should use matched validation folds and the same primary metric.
+Distance-scale parameters should be suggested from each candidate surface unless
+the user deliberately supplies a shared grid. Geographic kilometers and
+least-cost distances do not have the same units, so forcing both through one
+`popmod` or `empirical_pt_dist` grid can make surface comparison look more
+precise than it really is. Repeated spatial-block validation is especially
+important because it asks whether the selected surface predicts across space,
+not only whether it interpolates well at nearby leave-one-out sites.
 
 ## Interpreting G vs. C
 
@@ -190,10 +193,11 @@ avoids silently turning a suitability threshold into a biological wall.
 4. Extend `tune_popmaps(surface = "C")` so tuning can compare `G` and `C` with
    matched folds and repeated spatial blocks. `(initial support added)`
 5. Add a candidate-surface comparison wrapper for user-supplied surfaces.
-   `(initial support added)`
+   `(surface-specific grid support added)`
 6. Run the empirical examples with `G` and each available SDM-based `C` surface.
+   `(initial local report added)`
 7. Summarize whether each species supports `G`, `C`, indistinguishable models,
-   or unstable support.
+   or unstable support. `(initial local report added)`
 
 ## Open Design Questions
 

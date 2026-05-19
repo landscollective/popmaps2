@@ -199,16 +199,137 @@ suggest_tuning_grid <- function(input_locs,
                                 max_num_tested = 8) {
   distance_reference <- match.arg(distance_reference)
   locations <- popmaps_prepare_locations(input_locs)
+  coords <- as.matrix(locations[, 2:3, drop = FALSE])
+  distance_matrix <- popmaps_empirical_site_distances(coords)
+
+  popmaps_suggest_tuning_grid_from_distances(
+    locations = locations,
+    distance_matrix = distance_matrix,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    empirical_pt_dist_probs = empirical_pt_dist_probs,
+    distance_weights = distance_weights,
+    distance_reference = distance_reference,
+    max_num_tested = max_num_tested,
+    surface = "G",
+    surface_values = NA_character_,
+    distance_units = "km"
+  )
+}
+
+#' Suggest a POPMAPS tuning grid from a candidate surface
+#'
+#' @description
+#' `suggest_surface_tuning_grid()` is the surface-aware companion to
+#' [suggest_tuning_grid()]. It derives `empirical_pt_dist` and `popmod` from
+#' empirical sampling-site distances measured over the selected surface. For
+#' `surface = "G"` those distances are geographic kilometers. For
+#' `surface = "C"` they are least-cost distances through a suitability,
+#' conductance, or resistance surface.
+#'
+#' @inheritParams tune_popmaps
+#' @inheritParams suggest_tuning_grid
+#'
+#' @return A `popmaps_tuning_grid` list.
+#'
+#' @examples
+#' ex_raster <- terra::rast(raster::aggregate(hija_raster, fact = 240))
+#' grid <- suggest_surface_tuning_grid(
+#'   input_raster = ex_raster,
+#'   input_locs = hija_struc,
+#'   surface = "G"
+#' )
+#' grid$distance_units
+#'
+#' @export
+suggest_surface_tuning_grid <- function(input_raster,
+                                        input_locs,
+                                        surface = "G",
+                                        surface_values = c("suitability", "conductance", "resistance"),
+                                        num_sites = NULL,
+                                        num_tested = NULL,
+                                        empirical_pt_dist_probs = c(0.05, 0.10, 0.25),
+                                        distance_weights = c(0.95, 0.75, 0.50, 0.25, 0.10, 0.05),
+                                        distance_reference = c("median", "mean"),
+                                        max_num_tested = 8,
+                                        rescale_conductance = FALSE,
+                                        resistance_epsilon = sqrt(.Machine$double.eps)) {
+  surface <- match.arg(surface, c("G", "C"))
+  surface_values <- if (surface == "C") match.arg(surface_values) else NA_character_
+  distance_reference <- match.arg(distance_reference)
+  if (!is.logical(rescale_conductance) || length(rescale_conductance) != 1 || is.na(rescale_conductance)) {
+    stop("`rescale_conductance` must be `TRUE` or `FALSE`.", call. = FALSE)
+  }
+
+  locations <- popmaps_prepare_locations(input_locs)
+  coords <- as.matrix(locations[, 2:3, drop = FALSE])
+
+  if (surface == "G") {
+    distance_matrix <- popmaps_empirical_site_distances(coords)
+    grid_surface_values <- NA_character_
+    distance_units <- "km"
+  } else {
+    surface_object <- if (inherits(input_raster, "popmaps_surface")) {
+      if (!identical(input_raster$surface, "C")) {
+        stop("A prepared surface object must have `surface = \"C\"` for least-cost grid suggestions.", call. = FALSE)
+      }
+      input_raster
+    } else {
+      prepare_popmaps_surface(
+        input_raster = input_raster,
+        surface = "C",
+        surface_values = surface_values,
+        rescale_conductance = rescale_conductance,
+        resistance_epsilon = resistance_epsilon
+      )
+    }
+    graph <- popmaps_cost_distance_graph(surface_object, directions = 8)
+    distance_matrix <- popmaps_cost_distance_matrix(
+      surface = surface_object,
+      from_coords = coords,
+      directions = 8,
+      graph = graph
+    )
+    grid_surface_values <- surface_object$surface_values
+    distance_units <- "cost_distance"
+  }
+
+  popmaps_suggest_tuning_grid_from_distances(
+    locations = locations,
+    distance_matrix = distance_matrix,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    empirical_pt_dist_probs = empirical_pt_dist_probs,
+    distance_weights = distance_weights,
+    distance_reference = distance_reference,
+    max_num_tested = max_num_tested,
+    surface = surface,
+    surface_values = grid_surface_values,
+    distance_units = distance_units
+  )
+}
+
+popmaps_suggest_tuning_grid_from_distances <- function(locations,
+                                                       distance_matrix,
+                                                       num_sites,
+                                                       num_tested,
+                                                       empirical_pt_dist_probs,
+                                                       distance_weights,
+                                                       distance_reference,
+                                                       max_num_tested,
+                                                       surface,
+                                                       surface_values,
+                                                       distance_units) {
   if (nrow(locations) < 3) {
     stop("At least three empirical sites are required for leave-one-site-out tuning.", call. = FALSE)
   }
-
-  coords <- as.matrix(locations[, 2:3, drop = FALSE])
-  distances <- popmaps_empirical_site_distances(coords)
-  distances <- distances[upper.tri(distances)]
+  if (!is.matrix(distance_matrix) || nrow(distance_matrix) != nrow(locations) || ncol(distance_matrix) != nrow(locations)) {
+    stop("`distance_matrix` must be a square matrix with one row and column per empirical site.", call. = FALSE)
+  }
+  distances <- distance_matrix[upper.tri(distance_matrix)]
   distances <- distances[is.finite(distances) & distances > 0]
   if (length(distances) < 1) {
-    stop("Empirical sites must include at least two distinct coordinates.", call. = FALSE)
+    stop("Empirical sites must include at least two distinct locations with finite positive distances.", call. = FALSE)
   }
 
   n_training <- nrow(locations) - 1
@@ -294,7 +415,10 @@ suggest_tuning_grid <- function(input_locs,
     ),
     distance_reference = distance_reference,
     reference_distance = reference_distance,
-    distance_weights = distance_weights
+    distance_weights = distance_weights,
+    surface = surface,
+    surface_values = surface_values,
+    distance_units = distance_units
   )
   class(grid) <- "popmaps_tuning_grid"
   grid
@@ -865,8 +989,10 @@ print.popmaps_adaptive_tuning <- function(x, ...) {
 
 #' @export
 print.popmaps_tuning_grid <- function(x, ...) {
+  distance_units <- if (!is.null(x$distance_units)) x$distance_units else "km"
   cat("Suggested POPMAPS tuning grid\n")
-  cat("Reference distance: ", round(x$reference_distance, 3), " km (", x$distance_reference, ")\n", sep = "")
+  cat("Distance units: ", distance_units, "\n", sep = "")
+  cat("Reference distance: ", round(x$reference_distance, 3), " (", x$distance_reference, ")\n", sep = "")
   cat("num_sites: ", paste(x$num_sites, collapse = ", "), "\n", sep = "")
   cat("num_tested: ", paste(x$num_tested, collapse = ", "), "\n", sep = "")
   cat("empirical_pt_dist: ", paste(round(x$empirical_pt_dist, 3), collapse = ", "), "\n", sep = "")

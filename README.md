@@ -265,20 +265,35 @@ surface_comparison <- compare_popmaps_surfaces(
   input_locs = hija_struc,
   surfaces = candidate_surfaces,
   validation = "spatial_block",
-  spatial_block_repeats = 5,
-  empirical_pt_dist = 0,
-  num_sites = 5,
-  num_tested = 2,
-  popmod = -0.01
+  spatial_block_repeats = 5
 )
 
 surface_comparison$summary
 surface_comparison$support
+surface_comparison$grids
 ```
 
 This comparison asks which supplied surface best predicts withheld empirical
 ancestry estimates under the POPMAPS interpolation workflow. It does not replace
-upstream landscape-genetic or SDM analyses.
+upstream landscape-genetic or SDM analyses. By default, missing `popmod` and
+`empirical_pt_dist` values are suggested separately for each surface from that
+surface's empirical site-distance matrix. This avoids forcing least-cost
+distances through a tuning grid scaled for geographic kilometers. Set
+`surface_grid = "shared"` or pass explicit `popmod` and `empirical_pt_dist`
+values when a deliberately shared grid is desired.
+
+For local empirical examples stored outside the package repository, run:
+
+```sh
+POPMAPS_SURFACE_AGGREGATE=8 \
+POPMAPS_SURFACE_VALIDATION=spatial_block \
+POPMAPS_SURFACE_BLOCK_REPEATS=2 \
+Rscript tools/compare-example-surfaces.R
+```
+
+The script looks for `*_avg.asc` and matching `*.txt` files in
+`../popmaps_test_data`, compares geographic (`G`) and SDM suitability (`C`)
+surfaces, and writes summary CSVs plus a Markdown report with plots.
 
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
@@ -369,6 +384,7 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
 | `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
+| `suggest_surface_tuning_grid()` | Suggest tuning grids from distances measured over a geographic or least-cost candidate surface. |
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `jackknife()` | Test parameter combinations with a leave-one-out approach. |
 | `jackknife_viz()` | Visualize jackknife performance as heatmaps. |

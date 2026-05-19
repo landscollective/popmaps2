@@ -239,11 +239,46 @@ test_that("suggest_tuning_grid builds interpretable defaults from site distances
 
   expect_s3_class(grid, "popmaps_tuning_grid")
   expect_true(all(c("num_sites", "num_tested", "popmod", "empirical_pt_dist") %in% names(grid)))
+  expect_equal(grid$surface, "G")
+  expect_equal(grid$distance_units, "km")
   expect_true(all(grid$num_tested <= min(grid$num_sites)))
   expect_true(all(grid$popmod < 0))
   expect_true(all(grid$empirical_pt_dist >= 0))
   expect_equal(grid$empirical_pt_dist[1], 0)
   expect_true(is.finite(grid$reference_distance))
+  expect_true(grid$reference_distance > 0)
+})
+
+test_that("suggest_surface_tuning_grid uses least-cost distances for C surfaces", {
+  surface <- terra::rast(nrows = 4, ncols = 4, xmin = 0, xmax = 4, ymin = 0, ymax = 4)
+  terra::values(surface) <- c(
+    1, 1, 1, 1,
+    1, 2, 2, 1,
+    1, 2, 2, 1,
+    1, 1, 1, 1
+  )
+  locs <- data.frame(
+    site = paste0("s", 1:4),
+    lon = c(0.5, 3.5, 0.5, 3.5),
+    lat = c(0.5, 0.5, 3.5, 3.5),
+    axis1 = c(0.9, 0.8, 0.2, 0.1),
+    axis2 = c(0.1, 0.2, 0.8, 0.9)
+  )
+
+  grid <- suggest_surface_tuning_grid(
+    input_raster = surface,
+    input_locs = locs,
+    surface = "C",
+    num_sites = 3,
+    num_tested = 2
+  )
+
+  expect_s3_class(grid, "popmaps_tuning_grid")
+  expect_equal(grid$surface, "C")
+  expect_equal(grid$surface_values, "suitability")
+  expect_equal(grid$distance_units, "cost_distance")
+  expect_true(all(grid$popmod < 0))
+  expect_equal(grid$empirical_pt_dist[1], 0)
   expect_true(grid$reference_distance > 0)
 })
 
