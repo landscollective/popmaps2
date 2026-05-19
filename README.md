@@ -2,7 +2,7 @@
 
 `popmaps2` is the maintained successor to POPMAPS: **Population Management using Ancestry Probability Surfaces**. It estimates spatially explicit ancestry coefficients and ancestry probability surfaces from empirical genetic data across a user-defined landscape.
 
-The package is currently in private alpha. The initial codebase is seeded from the USGS POPMAPS 1.03 release so that results can be compared against the published implementation while the package is modernized, tested, documented, and optimized.
+The package is currently in development alpha. The initial codebase is seeded from the USGS POPMAPS 1.03 release so that results can be compared against the published implementation while the package is modernized, tested, documented, and optimized.
 
 ## Why This Exists
 
@@ -27,7 +27,7 @@ This repository is not yet a polished public release. It is a development branch
 - adding tests before deeper algorithmic refactoring;
 - replacing slow or deprecated spatial code with modern `terra`/`sf`-based workflows.
 
-The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Suitability-weighted least-cost modeling with `surface = "C"` still uses the legacy implementation and remains a priority for modernization.
+The modeling code is known to be computationally expensive. The original implementation loops over raster cells and repeatedly recalculates distances, which can make larger analyses slow. `popmaps2` now includes a faster geographic-distance path for `surface = "G"` that preserves the POPMAPS 1.03 output on validation cases. Parameter tuning can also use the modern internal least-cost helper for `surface = "C"` suitability, conductance, and resistance surfaces. Full suitability-weighted ancestry-surface estimation with `popmaps(surface = "C")` still uses the legacy implementation and remains a priority for modernization.
 
 ## Relationship to Related Software
 
@@ -60,14 +60,14 @@ A useful model is one that:
 - shows whether the best model is sharply supported or whether several parameter combinations perform similarly;
 - can later be compared across candidate surfaces so model choice reflects spatial genetic structure, dispersal, gene flow, and habitat-mediated connectivity rather than convenience.
 
-See `EMPIRICAL_TUNING_NOTES.md` for the current private empirical-example
+See `EMPIRICAL_TUNING_NOTES.md` for the current local empirical-example
 interpretation. See `G_VS_C_DESIGN.md` for the intended meaning of geographic
 versus suitability-weighted surface comparisons before `surface = "C"` is
 modernized.
 
 ## Installation
 
-During private development, install from GitHub after authenticating with access to the repository:
+Install the development version from GitHub:
 
 ```r
 install.packages("remotes")

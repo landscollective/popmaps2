@@ -15,7 +15,7 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 - Add repeated spatial-block validation so parameter support can be evaluated across multiple spatial partitions.
 - Document the intended `surface = "G"` versus `surface = "C"` model-selection contract before modernizing least-cost distance code.
 - Add a surface-preparation object that records whether candidate rasters are suitability, conductance, or resistance inputs.
-- Maintain private/local validation scripts for larger datasets that should not be committed.
+- Maintain local validation scripts for larger datasets that should not be committed.
 - Keep empirical example validation repeatable from local, uncommitted `*_avg.asc` and `*.txt` files.
 - Update examples so they run quickly and do not require retired packages.
 - Add a vignette that reproduces the published workflow at a reduced raster resolution.

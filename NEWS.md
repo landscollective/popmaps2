@@ -14,7 +14,7 @@
 - Added `validate_popmaps_baseline()` for repeatable comparison against a frozen POPMAPS 1.03 reference result.
 - Added an optimized geographic-distance engine for `popmaps(surface = "G")` that precomputes cell-site and empirical-site distances while preserving POPMAPS 1.03 outputs on validation cases.
 - Added `popmaps_rast()` and `write_popmaps()` to convert `popmaps()` output to `terra` rasters and export GeoTIFF layers.
-- Added `tools/validate-aslo-local.R` for private, larger-scale ASLO validation without committing raw project data.
+- Added `tools/validate-aslo-local.R` for local, larger-scale ASLO validation without committing raw project data.
 - Added `tune_popmaps()` for fast leave-one-site-out tuning of geographic-distance POPMAPS parameters with fold-level diagnostics and summary metrics.
 - Added vectorized `empirical_pt_dist` tuning plus `suggest_tuning_grid()` and `adaptive_tune_popmaps()` for data-adaptive parameter exploration.
 - Added `half_distance_km` and `ten_pct_distance_km` tuning summaries plus spatial-block validation for more biologically interpretable parameter selection.

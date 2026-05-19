@@ -206,6 +206,6 @@ avoids silently turning a suitability threshold into a biological wall.
 - Should the public API name the default `C` behavior as `conductance` even
   though the legacy argument is `surface = "C"`?
 - Which candidate surfaces should be included in public examples, and which
-  should remain private empirical-validation data?
+  should remain local or non-redistributable empirical-validation data?
 - How large does a predictive improvement need to be, relative to repeated-fold
   uncertainty, before the package labels `C` as supported?
