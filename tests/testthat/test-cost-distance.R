@@ -122,3 +122,10 @@ test_that("least-cost helper rejects geographic surfaces and non-traversable coo
     "traversable"
   )
 })
+
+test_that("least-cost graph uses stable cell names for large rasters", {
+  expect_equal(
+    popmaps2:::popmaps_cell_names(c(99999L, 100000L, 300000L)),
+    c("99999", "100000", "300000")
+  )
+})

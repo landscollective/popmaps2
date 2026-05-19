@@ -459,6 +459,17 @@ leave-one-site-out and spatial-block validation. Set
 `POPMAPS_EXAMPLE_BLOCK_REPEATS=5` and `POPMAPS_EXAMPLE_VALIDATION=spatial_block`
 to run repeated spatial-block validation.
 
+For runtime and memory-scale checks on ASLO-like inputs, run:
+
+```sh
+Rscript tools/benchmark-aslo-local.R /path/to/aslo_avg.asc /path/to/aslo.txt /tmp/popmaps2-aslo-benchmark
+```
+
+Set `POPMAPS_BENCH_AGGREGATES=16,4,1` and `POPMAPS_BENCH_SURFACES=G,C` to
+control the raster sizes and surfaces included in the benchmark. The output CSV
+records elapsed time, R object memory, garbage-collector maximum memory, raster
+dimensions, and resource settings.
+
 Summarize the latest empirical tuning run with:
 
 ```sh

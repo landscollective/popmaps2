@@ -9,3 +9,4 @@
 ^data-raw$
 ^.*[.]Rcheck$
 ^.*[.]tar[.]gz$
+^local_validation$

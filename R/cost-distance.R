@@ -25,15 +25,15 @@ popmaps_cost_distance_graph <- function(surface, directions = 8) {
     directions = directions
   )
 
-  vertices <- data.frame(name = as.character(traversable), stringsAsFactors = FALSE)
+  vertices <- data.frame(name = popmaps_cell_names(traversable), stringsAsFactors = FALSE)
   if (nrow(adjacency) == 0) {
     graph <- igraph::make_empty_graph(n = nrow(vertices), directed = FALSE)
     graph <- igraph::set_vertex_attr(graph, "name", value = vertices$name)
   } else {
     graph <- igraph::graph_from_data_frame(
       d = data.frame(
-        from = as.character(adjacency$from),
-        to = as.character(adjacency$to),
+        from = popmaps_cell_names(adjacency$from),
+        to = popmaps_cell_names(adjacency$to),
         weight = adjacency$cost,
         stringsAsFactors = FALSE
       ),
@@ -218,15 +218,19 @@ popmaps_coords_to_traversable_cells <- function(graph, coords, label) {
 popmaps_igraph_distances <- function(graph, from_cells, to_cells) {
   distances <- igraph::distances(
     graph,
-    v = as.character(unique(from_cells)),
-    to = as.character(unique(to_cells)),
+    v = popmaps_cell_names(unique(from_cells)),
+    to = popmaps_cell_names(unique(to_cells)),
     weights = igraph::E(graph)$weight,
     algorithm = "dijkstra"
   )
 
   distances[
-    match(as.character(from_cells), rownames(distances)),
-    match(as.character(to_cells), colnames(distances)),
+    match(popmaps_cell_names(from_cells), rownames(distances)),
+    match(popmaps_cell_names(to_cells), colnames(distances)),
     drop = FALSE
   ]
+}
+
+popmaps_cell_names <- function(cells) {
+  format(as.integer(cells), scientific = FALSE, trim = TRUE)
 }
