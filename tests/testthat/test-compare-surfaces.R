@@ -172,3 +172,80 @@ test_that("compare_popmaps_surfaces validates surface inputs", {
     "unique"
   )
 })
+
+test_that("plot_surface_comparison draws supported plot types", {
+  fixture <- surface_comparison_fixture()
+  surfaces <- list(
+    geographic = prepare_popmaps_surface(fixture$raster, surface = "G"),
+    suitability = prepare_popmaps_surface(
+      fixture$raster,
+      surface = "C",
+      surface_values = "suitability"
+    )
+  )
+  comparison <- compare_popmaps_surfaces(
+    input_locs = fixture$locs,
+    surfaces = surfaces,
+    empirical_pt_dist = c(0, 1),
+    num_sites = 3,
+    num_tested = 2,
+    popmod = c(-0.1, -0.2),
+    quiet = TRUE
+  )
+
+  path <- tempfile(fileext = ".png")
+  grDevices::png(path)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  expect_silent(plot_surface_comparison(comparison, type = "score"))
+  expect_silent(plot_surface_comparison(comparison, type = "percent_from_best"))
+  expect_silent(plot_surface_comparison(comparison, type = "best_parameters"))
+  expect_error(plot_surface_comparison(list()), "compare_popmaps_surfaces")
+})
+
+test_that("write_surface_comparison_report writes tables, figures, and markdown", {
+  fixture <- surface_comparison_fixture()
+  surfaces <- list(
+    geographic = prepare_popmaps_surface(fixture$raster, surface = "G"),
+    suitability = prepare_popmaps_surface(
+      fixture$raster,
+      surface = "C",
+      surface_values = "suitability"
+    )
+  )
+  comparison <- compare_popmaps_surfaces(
+    input_locs = fixture$locs,
+    surfaces = surfaces,
+    empirical_pt_dist = c(0, 1),
+    num_sites = 3,
+    num_tested = 2,
+    popmod = c(-0.1, -0.2),
+    quiet = TRUE
+  )
+
+  report_dir <- tempfile("surface-report-")
+  manifest <- write_surface_comparison_report(
+    comparison,
+    dir = report_dir,
+    prefix = "hija-surfaces",
+    include_tuning_results = TRUE
+  )
+
+  expect_s3_class(manifest, "popmaps_surface_comparison_report")
+  expect_true(file.exists(manifest$report))
+  expect_true(all(file.exists(manifest$tables)))
+  expect_true(all(file.exists(manifest$figures)))
+  expect_true(all(file.exists(manifest$tuning_results)))
+  expect_equal(nrow(utils::read.csv(manifest$tables[["summary"]])), 2)
+  expect_match(paste(readLines(manifest$report), collapse = "\n"), "Best surface")
+
+  expect_error(
+    write_surface_comparison_report(
+      comparison,
+      dir = report_dir,
+      prefix = "hija-surfaces",
+      overwrite = FALSE
+    ),
+    "already exist"
+  )
+})

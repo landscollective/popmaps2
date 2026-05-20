@@ -28,6 +28,7 @@
 - Extended `tune_popmaps(surface = "C")` to score suitability-, conductance-, and resistance-weighted least-cost surfaces with the modern distance helper.
 - Added `compare_popmaps_surfaces()` for matched predictive comparison of user-supplied candidate surfaces.
 - Added `suggest_surface_tuning_grid()` and surface-specific defaults in `compare_popmaps_surfaces()` so geographic and least-cost surfaces can be tuned on their own distance scales.
+- Added `plot_surface_comparison()` and `write_surface_comparison_report()` to turn candidate-surface comparisons into diagnostic figures, CSVs, and Markdown reports.
 - Added `tools/compare-example-surfaces.R` for local empirical G-vs-SDM surface comparisons, summary tables, reports, and plots across uncommitted example datasets.
 - Replaced the full `popmaps(surface = "C")` least-cost interpolation engine with the internal distance helper, removing the `gdistance` requirement from the main ancestry-surface workflow while preserving the original suitability-as-conductance default.
 - Added shared resource configuration for local validation/reporting scripts, including cross-platform processor detection, conservative thread defaults for system libraries, terra memory settings, and run-summary reporting.

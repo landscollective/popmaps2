@@ -37,10 +37,6 @@ ancestry coefficients. If 'G', the spatial attributes of input_raster will be us
 geographic (i.e., Euclidean) distances between empirical sites and inference sites. If 'C',
 least-cost distances are calculated using the values contained in the raster cells.}
 
-\item{surface_values}{Character. Meaning of raster values when \code{surface = "C"}.
-\code{"suitability"} and \code{"conductance"} use values directly; \code{"resistance"}
-converts values to conductance using an inverse transform.}
-
 \item{empirical_pt_dist}{An integer representing the minimum distance that all sites in num_tested
 must be separated by. If num_tested = 3, the closest two empirical sites to the cell are
 determined first. If the two sites are closer than this value, the closest will be kept and the
@@ -77,6 +73,10 @@ would never be expected to occur.}
 \item{dist_prob_func}{A function defining the relationship between distance and the contribution
 of an empirical site’s ancestry coefficients to the estimation of ancestry coefficients at
 an inference cell. The default equation defines the relationship in Fig. 2 of Massatti & Winkler (2022).}
+
+\item{surface_values}{Character. Meaning of raster values when \code{surface = "C"}.
+\code{"suitability"} and \code{"conductance"} use values directly; \code{"resistance"}
+converts values to conductance using an inverse transform.}
 
 \item{rescale_conductance}{Logical. If \code{TRUE}, rescale non-missing
 conductance values to the range 0-1 after any resistance conversion.}
