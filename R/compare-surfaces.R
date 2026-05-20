@@ -242,6 +242,167 @@ print.popmaps_surface_comparison <- function(x, ...) {
   invisible(x)
 }
 
+#' Plot a POPMAPS surface comparison
+#'
+#' @description
+#' `plot_surface_comparison()` draws compact base R diagnostic plots from a
+#' [compare_popmaps_surfaces()] result. These plots are intended to make surface
+#' support interpretable without requiring users to inspect the comparison list
+#' by hand.
+#'
+#' @param comparison A `popmaps_surface_comparison` object returned by
+#'   [compare_popmaps_surfaces()].
+#' @param type Plot type. `"score"` plots the primary validation metric by
+#'   surface. `"percent_from_best"` plots relative loss from the best surface.
+#'   `"best_parameters"` plots the best parameter values selected for each
+#'   surface.
+#' @param col Optional vector of plotting colors. Named vectors are matched to
+#'   surface names; unnamed vectors are recycled in comparison order.
+#' @param main Optional plot title.
+#' @param ... Additional arguments passed to base plotting functions.
+#'
+#' @return Invisibly returns `comparison`.
+#'
+#' @export
+plot_surface_comparison <- function(comparison,
+                                    type = c("score", "percent_from_best", "best_parameters"),
+                                    col = NULL,
+                                    main = NULL,
+                                    ...) {
+  popmaps_check_surface_comparison(comparison)
+  type <- match.arg(type)
+
+  summary <- comparison$summary
+  surface_names <- summary$surface_name
+  colors <- popmaps_surface_comparison_colors(surface_names, col)
+
+  if (type == "score") {
+    popmaps_plot_surface_scores(summary, comparison$primary_metric, colors, main, ...)
+  } else if (type == "percent_from_best") {
+    popmaps_plot_surface_percent_from_best(summary, colors, main, ...)
+  } else {
+    popmaps_plot_surface_best_parameters(summary, colors, main, ...)
+  }
+
+  invisible(comparison)
+}
+
+#' Write a POPMAPS surface comparison report
+#'
+#' @description
+#' `write_surface_comparison_report()` writes the main tables, diagnostic plots,
+#' and a small Markdown interpretation file from a
+#' [compare_popmaps_surfaces()] result. It is designed for reproducible local
+#' validation runs where users need durable artifacts to compare candidate
+#' geographic, suitability, conductance, or resistance surfaces.
+#'
+#' @inheritParams plot_surface_comparison
+#' @param dir Output directory. Created recursively if needed.
+#' @param prefix File prefix used for all report artifacts.
+#' @param include_tuning_results Logical. If `TRUE`, write one full
+#'   `tune_popmaps()` results CSV per candidate surface.
+#' @param overwrite Logical. If `FALSE`, stop before replacing an existing
+#'   output file.
+#' @param width,height,res PNG device settings for report figures.
+#'
+#' @return A `popmaps_surface_comparison_report` list containing paths to the
+#'   written report, tables, figures, and optional tuning-result CSVs.
+#'
+#' @export
+write_surface_comparison_report <- function(comparison,
+                                            dir = ".",
+                                            prefix = "surface-comparison",
+                                            include_tuning_results = TRUE,
+                                            overwrite = TRUE,
+                                            width = 1500,
+                                            height = 900,
+                                            res = 150) {
+  popmaps_check_surface_comparison(comparison)
+  popmaps_check_character_scalar(dir, "`dir`")
+  popmaps_check_character_scalar(prefix, "`prefix`")
+  popmaps_check_logical_scalar(include_tuning_results, "`include_tuning_results`")
+  popmaps_check_logical_scalar(overwrite, "`overwrite`")
+  popmaps_check_png_dimension(width, "`width`")
+  popmaps_check_png_dimension(height, "`height`")
+  popmaps_check_png_dimension(res, "`res`")
+
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  dir <- normalizePath(dir, mustWork = TRUE)
+  figure_dir <- file.path(dir, "figures")
+  dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
+
+  table_paths <- c(
+    summary = file.path(dir, paste0(prefix, "-summary.csv")),
+    support = file.path(dir, paste0(prefix, "-support.csv")),
+    grids = file.path(dir, paste0(prefix, "-grids.csv"))
+  )
+  figure_paths <- c(
+    score = file.path(figure_dir, paste0(prefix, "-scores.png")),
+    percent_from_best = file.path(figure_dir, paste0(prefix, "-percent-from-best.png")),
+    best_parameters = file.path(figure_dir, paste0(prefix, "-best-parameters.png"))
+  )
+  report_path <- file.path(dir, paste0(prefix, "-report.md"))
+
+  popmaps_check_report_paths(
+    c(table_paths, figure_paths, report = report_path),
+    overwrite = overwrite
+  )
+
+  grids <- popmaps_flatten_surface_comparison_grids(comparison$grids)
+  popmaps_write_report_table(comparison$summary, table_paths[["summary"]])
+  popmaps_write_report_table(comparison$support, table_paths[["support"]])
+  popmaps_write_report_table(grids, table_paths[["grids"]])
+
+  popmaps_write_surface_comparison_png(
+    figure_paths[["score"]],
+    width = width,
+    height = height,
+    res = res,
+    expr = plot_surface_comparison(comparison, type = "score")
+  )
+  popmaps_write_surface_comparison_png(
+    figure_paths[["percent_from_best"]],
+    width = width,
+    height = height,
+    res = res,
+    expr = plot_surface_comparison(comparison, type = "percent_from_best")
+  )
+  popmaps_write_surface_comparison_png(
+    figure_paths[["best_parameters"]],
+    width = width,
+    height = height,
+    res = res,
+    expr = plot_surface_comparison(comparison, type = "best_parameters")
+  )
+
+  tuning_paths <- character()
+  if (isTRUE(include_tuning_results)) {
+    tuning_paths <- popmaps_write_surface_tuning_results(
+      comparison = comparison,
+      dir = dir,
+      prefix = prefix,
+      overwrite = overwrite
+    )
+  }
+
+  report <- popmaps_surface_comparison_markdown(
+    comparison = comparison,
+    table_paths = table_paths,
+    figure_paths = figure_paths,
+    tuning_paths = tuning_paths
+  )
+  writeLines(report, report_path)
+
+  manifest <- list(
+    report = report_path,
+    tables = table_paths,
+    figures = figure_paths,
+    tuning_results = tuning_paths
+  )
+  class(manifest) <- "popmaps_surface_comparison_report"
+  manifest
+}
+
 popmaps_normalize_surface_specs <- function(surfaces) {
   if (!is.list(surfaces) || length(surfaces) < 2) {
     stop("`surfaces` must be a named list with at least two candidate surfaces.", call. = FALSE)
@@ -413,4 +574,323 @@ popmaps_surface_comparison_support <- function(summary,
     near_best_surfaces = paste(near_best$surface_name, collapse = ", "),
     stringsAsFactors = FALSE
   )
+}
+
+popmaps_check_surface_comparison <- function(comparison) {
+  if (!inherits(comparison, "popmaps_surface_comparison") || is.null(comparison$summary)) {
+    stop(
+      "`comparison` must be an object returned by `compare_popmaps_surfaces()`.",
+      call. = FALSE
+    )
+  }
+
+  required <- c("surface_name", "score", "percent_from_best")
+  missing <- setdiff(required, names(comparison$summary))
+  if (length(missing) > 0) {
+    stop("`comparison$summary` is missing required columns.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+popmaps_check_logical_scalar <- function(x, label) {
+  if (!is.logical(x) || length(x) != 1 || is.na(x)) {
+    stop(label, " must be `TRUE` or `FALSE`.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+popmaps_check_png_dimension <- function(x, label) {
+  if (!is.numeric(x) || length(x) != 1 || !is.finite(x) || x <= 0) {
+    stop(label, " must be one positive finite number.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+popmaps_surface_comparison_colors <- function(surface_names, col = NULL) {
+  if (is.null(col)) {
+    colors <- grDevices::hcl.colors(length(surface_names), "Dark 3")
+  } else {
+    if (!is.character(col) || length(col) < 1 || anyNA(col)) {
+      stop("`col` must be a character vector of colors.", call. = FALSE)
+    }
+    if (!is.null(names(col)) && all(surface_names %in% names(col))) {
+      colors <- unname(col[surface_names])
+    } else {
+      colors <- rep(col, length.out = length(surface_names))
+    }
+  }
+
+  stats::setNames(colors, surface_names)
+}
+
+popmaps_surface_metric_label <- function(primary_metric) {
+  goal <- if (popmaps_metric_is_maximized(primary_metric)) {
+    "higher is better"
+  } else {
+    "lower is better"
+  }
+
+  paste0(primary_metric, " (", goal, ")")
+}
+
+popmaps_plot_bar <- function(values, colors, ylab, main, ...) {
+  if (!any(is.finite(values))) {
+    stop("No finite values are available to plot.", call. = FALSE)
+  }
+
+  args <- list(...)
+  defaults <- list(
+    height = values,
+    col = colors,
+    las = 2,
+    ylab = ylab,
+    main = main
+  )
+  defaults[names(args)] <- args
+  do.call(graphics::barplot, defaults)
+}
+
+popmaps_plot_surface_scores <- function(summary, primary_metric, colors, main, ...) {
+  values <- summary$score
+  names(values) <- summary$surface_name
+  plot_main <- if (is.null(main)) "Surface validation score" else main
+  mids <- popmaps_plot_bar(
+    values = values,
+    colors = colors[summary$surface_name],
+    ylab = popmaps_surface_metric_label(primary_metric),
+    main = plot_main,
+    ...
+  )
+  graphics::abline(h = values[[1]], lty = 2, col = "gray35")
+  graphics::text(
+    x = mids,
+    y = values,
+    labels = paste0("#", summary$rank),
+    pos = 3,
+    cex = 0.8,
+    xpd = NA
+  )
+}
+
+popmaps_plot_surface_percent_from_best <- function(summary, colors, main, ...) {
+  values <- summary$percent_from_best
+  names(values) <- summary$surface_name
+  plot_main <- if (is.null(main)) "Percent loss from best surface" else main
+  mids <- popmaps_plot_bar(
+    values = values,
+    colors = colors[summary$surface_name],
+    ylab = "Percent from best",
+    main = plot_main,
+    ...
+  )
+  graphics::abline(h = 5, lty = 2, col = "gray35")
+  graphics::text(
+    x = mids,
+    y = values,
+    labels = paste0(signif(values, 3), "%"),
+    pos = 3,
+    cex = 0.8,
+    xpd = NA
+  )
+}
+
+popmaps_plot_surface_best_parameters <- function(summary, colors, main, ...) {
+  parameters <- intersect(
+    c("num_sites", "num_tested", "empirical_pt_dist", "popmod"),
+    names(summary)
+  )
+  if (length(parameters) < 1) {
+    stop("No best-parameter columns are available to plot.", call. = FALSE)
+  }
+
+  old_par <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(old_par), add = TRUE)
+  n_col <- min(2, length(parameters))
+  n_row <- ceiling(length(parameters) / n_col)
+  graphics::par(mfrow = c(n_row, n_col), mar = c(7, 4, 3, 1), oma = c(0, 0, 3, 0))
+
+  args <- list(...)
+  for (parameter in parameters) {
+    values <- summary[[parameter]]
+    names(values) <- summary$surface_name
+    plot_args <- list(
+      height = values,
+      col = colors[summary$surface_name],
+      las = 2,
+      ylab = parameter,
+      main = parameter
+    )
+    plot_args[names(args)] <- args
+    do.call(graphics::barplot, plot_args)
+  }
+  if (!is.null(main)) {
+    graphics::mtext(main, side = 3, outer = TRUE, line = 1)
+  }
+}
+
+popmaps_check_report_paths <- function(paths, overwrite) {
+  existing <- paths[file.exists(paths)]
+  if (length(existing) > 0 && !isTRUE(overwrite)) {
+    stop(
+      "Output files already exist and `overwrite = FALSE`: ",
+      paste(existing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
+popmaps_write_report_table <- function(x, path) {
+  utils::write.csv(x, path, row.names = FALSE)
+  invisible(path)
+}
+
+popmaps_flatten_surface_comparison_grids <- function(grids) {
+  rows <- lapply(names(grids), function(surface_name) {
+    grid <- grids[[surface_name]]
+    data.frame(
+      surface_name = surface_name,
+      surface = grid$surface,
+      surface_values = grid$surface_values,
+      distance_units = grid$distance_units,
+      reference_distance = grid$reference_distance,
+      distance_reference = grid$distance_reference,
+      empirical_pt_dist = paste(signif(grid$empirical_pt_dist, 5), collapse = "; "),
+      num_sites = paste(grid$num_sites, collapse = "; "),
+      num_tested = paste(grid$num_tested, collapse = "; "),
+      popmod = paste(signif(grid$popmod, 5), collapse = "; "),
+      stringsAsFactors = FALSE
+    )
+  })
+  grids <- do.call(rbind, rows)
+  rownames(grids) <- NULL
+  grids
+}
+
+popmaps_write_surface_comparison_png <- function(path, width, height, res, expr) {
+  grDevices::png(path, width = width, height = height, res = res)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  force(expr)
+  invisible(path)
+}
+
+popmaps_safe_surface_filename <- function(surface_name) {
+  safe <- gsub("[^A-Za-z0-9._-]+", "-", surface_name)
+  safe <- gsub("^-+|-+$", "", safe)
+  if (!nzchar(safe)) {
+    safe <- "surface"
+  }
+
+  safe
+}
+
+popmaps_write_surface_tuning_results <- function(comparison, dir, prefix, overwrite) {
+  paths <- vapply(names(comparison$tunings), function(surface_name) {
+    file.path(
+      dir,
+      paste0(prefix, "-", popmaps_safe_surface_filename(surface_name), "-tuning-results.csv")
+    )
+  }, character(1))
+  popmaps_check_report_paths(paths, overwrite = overwrite)
+
+  for (surface_name in names(comparison$tunings)) {
+    rows <- cbind(
+      data.frame(surface_name = surface_name, stringsAsFactors = FALSE),
+      comparison$tunings[[surface_name]]$results
+    )
+    popmaps_write_report_table(rows, paths[[surface_name]])
+  }
+
+  paths
+}
+
+popmaps_markdown_table <- function(x, columns) {
+  columns <- intersect(columns, names(x))
+  if (nrow(x) < 1 || length(columns) < 1) {
+    return("No rows available.")
+  }
+
+  x <- x[, columns, drop = FALSE]
+  x[] <- lapply(x, function(value) {
+    if (is.numeric(value)) {
+      signif(value, 5)
+    } else {
+      value
+    }
+  })
+  x[is.na(x)] <- ""
+
+  header <- paste("|", paste(names(x), collapse = " | "), "|")
+  divider <- paste("|", paste(rep("---", ncol(x)), collapse = " | "), "|")
+  rows <- apply(x, 1, function(row) paste("|", paste(row, collapse = " | "), "|"))
+  c(header, divider, rows)
+}
+
+popmaps_surface_comparison_markdown <- function(comparison,
+                                                table_paths,
+                                                figure_paths,
+                                                tuning_paths) {
+  metric_sentence <- if (popmaps_metric_is_maximized(comparison$primary_metric)) {
+    "Higher values are better for the primary metric."
+  } else {
+    "Lower values are better for the primary metric."
+  }
+
+  report <- c(
+    "# POPMAPS Surface Comparison Report",
+    "",
+    paste0("Decision: `", comparison$support$decision, "`"),
+    paste0("Best surface: `", comparison$support$best_surface, "`"),
+    paste0("Primary metric: `", comparison$primary_metric, "`"),
+    paste0("Validation: `", comparison$validation, "`"),
+    "",
+    metric_sentence,
+    "`percent_from_best` is the relative change from the best-ranked surface. ",
+    "Surfaces inside the near-best tolerance should be treated as similarly supported by the current validation design.",
+    "",
+    "## Tables",
+    "",
+    paste0("- Summary: `", basename(table_paths[["summary"]]), "`"),
+    paste0("- Support: `", basename(table_paths[["support"]]), "`"),
+    paste0("- Tuning grids: `", basename(table_paths[["grids"]]), "`"),
+    "",
+    "## Surface Support",
+    "",
+    popmaps_markdown_table(
+      comparison$support,
+      c("decision", "best_surface", "primary_metric", "best_score",
+        "near_best_tolerance", "n_near_best", "near_best_surfaces")
+    ),
+    "",
+    "## Surface Ranking",
+    "",
+    popmaps_markdown_table(
+      comparison$summary,
+      c("rank", "surface_name", "surface", "surface_values", "score",
+        "percent_from_best", "distance_units", "num_sites", "num_tested",
+        "popmod", "empirical_pt_dist", "failed_folds")
+    ),
+    "",
+    "## Figures",
+    "",
+    paste0("- `figures/", basename(figure_paths[["score"]]), "`: primary validation score by candidate surface."),
+    paste0("- `figures/", basename(figure_paths[["percent_from_best"]]), "`: relative loss from the best surface."),
+    paste0("- `figures/", basename(figure_paths[["best_parameters"]]), "`: best parameter values selected for each surface.")
+  )
+
+  if (length(tuning_paths) > 0) {
+    report <- c(
+      report,
+      "",
+      "## Full Tuning Results",
+      "",
+      paste0("- `", basename(tuning_paths), "`")
+    )
+  }
+
+  report
 }

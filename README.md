@@ -273,6 +273,21 @@ surface_comparison$support
 surface_comparison$grids
 ```
 
+Draw quick diagnostics or write durable report artifacts:
+
+```r
+plot_surface_comparison(surface_comparison, type = "score")
+plot_surface_comparison(surface_comparison, type = "percent_from_best")
+
+report <- write_surface_comparison_report(
+  surface_comparison,
+  dir = "surface-comparison-report",
+  prefix = "hija-surfaces"
+)
+
+report$report
+```
+
 This comparison asks which supplied surface best predicts withheld empirical
 ancestry estimates under the POPMAPS interpolation workflow. It does not replace
 upstream landscape-genetic or SDM analyses. By default, missing `popmod` and
@@ -381,6 +396,8 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
 | `tune_popmaps()` | Tune geographic or least-cost POPMAPS parameters with leave-one-out or spatial-block validation metrics. |
 | `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
+| `plot_surface_comparison()` | Plot surface validation scores, relative support gaps, and selected best parameters. |
+| `write_surface_comparison_report()` | Write surface-comparison CSVs, diagnostic figures, and a Markdown report. |
 | `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
 | `suggest_surface_tuning_grid()` | Suggest tuning grids from distances measured over a geographic or least-cost candidate surface. |
