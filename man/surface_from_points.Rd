@@ -12,7 +12,7 @@ surface_from_points(
   target_cells = 100,
   crs = "",
   values = 1,
-  surface = c("G", "C"),
+  surface = "G",
   surface_values = c("suitability", "conductance", "resistance"),
   rescale_conductance = FALSE,
   resistance_epsilon = sqrt(.Machine$double.eps)
@@ -69,8 +69,10 @@ A \code{popmaps_surface} object.
 }
 \description{
 \code{surface_from_points()} builds a simple prediction grid around sampling
-coordinates, then returns a \code{\link[=prepare_popmaps_surface]{prepare_popmaps_surface()}} object. This is useful
-when users have empirical ancestry locations but have not supplied a raster
-yet. The resulting surface is usually geographic (\code{surface = "G"}), although
-a constant conductance surface can also be created with \code{surface = "C"}.
+coordinates, then returns a \code{\link[=prepare_popmaps_surface]{prepare_popmaps_surface()}} object. This helper is
+primarily for geographic interpolation (\code{surface = "G"}) or template
+creation when users have empirical ancestry locations but have not supplied a
+raster yet. A constant conductance surface can also be created with
+\code{surface = "C"}, but that is a neutral grid rather than a biologically
+informed landscape surface.
 }

@@ -104,6 +104,11 @@ Raster values are used differently depending on `surface`:
 - `surface = "G"` uses geographic distance between empirical sites and raster cells. Raster values do not affect distances or ancestry weights, although `NA` values and `threshold` can still define which cells receive estimates.
 - `surface = "C"` uses least-cost distance across raster cell values. In the original workflow these values are MaxEnt species distribution model logistic values, interpreted as habitat suitability or occupancy probability. Higher values act as higher conductance/easier movement; lower values increase effective distance.
 
+In short, `G` is a geographic interpolation surface and `C` is a
+conductance/cost-distance interpolation surface. `popmaps2` compares how well
+these supplied surfaces predict withheld ancestry estimates; it does not infer
+the upstream SDM, EEMS, FEEMS, or resistance model.
+
 Use `threshold` to skip cells where ancestry coefficients should not be estimated, such as cells below a species distribution model suitability threshold. `threshold` is a prediction mask rather than a hard least-cost barrier.
 
 Candidate surfaces can be prepared explicitly with:
@@ -178,6 +183,12 @@ input_locs <- locs_from_sf(
   ancestry_cols = c("axis1", "axis2", "axis3")
 )
 ```
+
+`surface_from_points()` defaults to `surface = "G"` and should usually be read
+as "make a geographic/template grid around these coordinates." It can create a
+constant `C` surface, but biologically meaningful `C` analyses should normally
+come from a supplied suitability, conductance, resistance, EEMS, FEEMS, or other
+landscape surface.
 
 ### 3. Optional Sample Points
 
@@ -338,6 +349,22 @@ The script looks for `*_avg.asc` and matching `*.txt` files in
 `../popmaps_test_data`, compares geographic (`G`) and SDM suitability (`C`)
 surfaces, and writes aggregate summary CSVs plus one standard
 `write_surface_comparison_report()` folder per species/validation comparison.
+
+For a minimal bundled-data example using the input converters and report helper:
+
+```sh
+Rscript tools/example-surface-comparison.R
+```
+
+This creates a geographic surface from the embedded example coordinates with
+`surface_from_points()`, compares it to the embedded SDM suitability raster, and
+writes a report under `local_validation/example_surface_comparison`.
+
+A longer walkthrough is available in the vignette:
+
+```r
+vignette("surface-comparison", package = "popmaps2")
+```
 
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
