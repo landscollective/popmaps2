@@ -161,6 +161,20 @@ flatten_grid <- function(grid, species, validation, surface_name) {
   )
 }
 
+flatten_report_manifest <- function(manifest, species, validation) {
+  data.frame(
+    species = species,
+    validation = validation,
+    report = manifest$report,
+    summary = manifest$tables[["summary"]],
+    support = manifest$tables[["support"]],
+    grids = manifest$tables[["grids"]],
+    figures = paste(manifest$figures, collapse = "; "),
+    tuning_results = paste(manifest$tuning_results, collapse = "; "),
+    stringsAsFactors = FALSE
+  )
+}
+
 plot_surface_scores <- function(summary, path) {
   species <- sort(unique(summary$species))
   validations <- unique(summary$validation)
@@ -270,6 +284,7 @@ run_stamp <- format(Sys.time(), "%Y%m%d-%H%M%S")
 summary_rows <- list()
 support_rows <- list()
 grid_rows <- list()
+report_rows <- list()
 
 for (row_idx in seq_len(nrow(pairs))) {
   species <- pairs$species[row_idx]
@@ -336,9 +351,34 @@ for (row_idx in seq_len(nrow(pairs))) {
         stringsAsFactors = FALSE
       )
       support_rows[[length(support_rows) + 1]] <- support
+      report_rows[[length(report_rows) + 1]] <- data.frame(
+        species = species,
+        validation = validation,
+        report = NA_character_,
+        summary = NA_character_,
+        support = file.path(output_dir, paste0(prefix, "-support.csv")),
+        grids = NA_character_,
+        figures = NA_character_,
+        tuning_results = NA_character_,
+        stringsAsFactors = FALSE
+      )
       write_table(support, file.path(output_dir, paste0(prefix, "-support.csv")))
       next
     }
+
+    comparison_report_dir <- file.path(output_dir, "comparisons", prefix)
+    report_manifest <- popmaps2::write_surface_comparison_report(
+      comparison = comparison,
+      dir = comparison_report_dir,
+      prefix = prefix,
+      include_tuning_results = write_surface_results,
+      overwrite = TRUE
+    )
+    report_rows[[length(report_rows) + 1]] <- flatten_report_manifest(
+      report_manifest,
+      species = species,
+      validation = validation
+    )
 
     summary <- cbind(
       data.frame(species = species, validation = validation, stringsAsFactors = FALSE),
@@ -355,35 +395,23 @@ for (row_idx in seq_len(nrow(pairs))) {
     summary_rows[[length(summary_rows) + 1]] <- summary
     support_rows[[length(support_rows) + 1]] <- support
     grid_rows[[length(grid_rows) + 1]] <- grids
-
-    write_table(summary, file.path(output_dir, paste0(prefix, "-summary.csv")))
-    write_table(support, file.path(output_dir, paste0(prefix, "-support.csv")))
-    write_table(grids, file.path(output_dir, paste0(prefix, "-grids.csv")))
-
-    if (write_surface_results) {
-      for (surface_name in names(comparison$tunings)) {
-        result_path <- file.path(output_dir, paste0(prefix, "-", surface_name, "-results.csv"))
-        result_rows <- cbind(
-          data.frame(species = species, validation = validation, surface_name = surface_name),
-          comparison$tunings[[surface_name]]$results
-        )
-        write_table(result_rows, result_path)
-      }
-    }
   }
 }
 
 summary_table <- if (length(summary_rows) > 0) do.call(rbind, summary_rows) else data.frame()
 support_table <- if (length(support_rows) > 0) do.call(rbind, support_rows) else data.frame()
 grid_table <- if (length(grid_rows) > 0) do.call(rbind, grid_rows) else data.frame()
+report_table <- if (length(report_rows) > 0) do.call(rbind, report_rows) else data.frame()
 
 summary_path <- file.path(output_dir, paste0("empirical-surface-comparison-summary-", run_stamp, ".csv"))
 support_path <- file.path(output_dir, paste0("empirical-surface-comparison-support-", run_stamp, ".csv"))
 grid_path <- file.path(output_dir, paste0("empirical-surface-comparison-grids-", run_stamp, ".csv"))
+report_manifest_path <- file.path(output_dir, paste0("empirical-surface-comparison-reports-", run_stamp, ".csv"))
 resource_path <- file.path(output_dir, paste0("empirical-surface-comparison-run-summary-", run_stamp, ".csv"))
 write_table(summary_table, summary_path)
 write_table(support_table, support_path)
 write_table(grid_table, grid_path)
+write_table(report_table, report_manifest_path)
 write_table(
   cbind(
     data.frame(
@@ -417,6 +445,7 @@ report <- c(
   paste0("Source summary table: `", summary_path, "`"),
   paste0("Source support table: `", support_path, "`"),
   paste0("Source grid table: `", grid_path, "`"),
+  paste0("Source report manifest: `", report_manifest_path, "`"),
   paste0("Source run summary table: `", resource_path, "`"),
   "",
   paste0("Raster aggregation factor: ", aggregate_fact),
@@ -433,6 +462,7 @@ report <- c(
   "",
   "Lower RMSE values are better. `percent_from_best` is the percent increase in RMSE relative to the best-ranked surface for that species and validation design.",
   "`surfaces_indistinguishable` means at least two surfaces were within the near-best tolerance, so the data do not clearly support one surface over the other.",
+  "Each completed species/validation comparison also writes the standard `write_surface_comparison_report()` CSVs, figures, and Markdown report in `comparisons/`.",
   "",
   "## Surface Support",
   "",
@@ -469,6 +499,17 @@ report <- c(
   "",
   "- `figures/surface-validation-scores.png`: validation RMSE by species and surface.",
   "- `figures/surface-percent-from-best.png`: relative support gap between candidate surfaces.",
+  "",
+  "## Per-Comparison Reports",
+  "",
+  if (nrow(report_table) > 0) {
+    markdown_table(
+      report_table,
+      intersect(c("species", "validation", "report"), names(report_table))
+    )
+  } else {
+    "No comparison reports were written."
+  },
   ""
 )
 writeLines(report, report_path)

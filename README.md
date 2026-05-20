@@ -308,7 +308,8 @@ Rscript tools/compare-example-surfaces.R
 
 The script looks for `*_avg.asc` and matching `*.txt` files in
 `../popmaps_test_data`, compares geographic (`G`) and SDM suitability (`C`)
-surfaces, and writes summary CSVs plus a Markdown report with plots.
+surfaces, and writes aggregate summary CSVs plus one standard
+`write_surface_comparison_report()` folder per species/validation comparison.
 
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
