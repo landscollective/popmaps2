@@ -11,6 +11,7 @@ A maintained successor to POPMAPS for estimating ancestry coefficients and ances
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://landscollective.github.io/popmaps2}
   \item \url{https://github.com/landscollective/popmaps2}
   \item Report bugs at \url{https://github.com/landscollective/popmaps2/issues}
 }

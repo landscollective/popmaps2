@@ -1,11 +1,12 @@
-legacy_popmaps_c_reference <- function(raster_surface,
-                                       species_data,
-                                       empirical_pt_dist,
-                                       num_sites,
-                                       num_tested,
-                                       popmod,
-                                       threshold,
-                                       dist_prob_func) {
+gdistance_popmaps_c_reference <- function(raster_surface,
+                                          species_data,
+                                          empirical_pt_dist,
+                                          num_sites,
+                                          num_tested,
+                                          popmod,
+                                          threshold,
+                                          dist_prob_func,
+                                          legacy_compat = FALSE) {
   nrows <- raster_surface@nrows
   ncols <- raster_surface@ncols
   ymax <- raster_surface@extent@ymax
@@ -14,12 +15,9 @@ legacy_popmaps_c_reference <- function(raster_surface,
   num_axes <- ncol(species_data) - 3
   ancestry <- as.matrix(species_data[, seq.int(4, ncol(species_data)), drop = FALSE])
   sampling_loc_coords <- as.matrix(species_data[, 2:3, drop = FALSE])
-  coords <- popmaps2:::popmaps_legacy_cell_coords(
-    nrows = nrows,
-    ncols = ncols,
-    xmin = xmin,
-    ymax = ymax,
-    cell_size = cell_size
+  coords <- popmaps2:::popmaps_cell_coords(
+    raster_surface,
+    legacy_compat = legacy_compat
   )
 
   raster_values <- raster::extract(raster_surface, coords)
@@ -35,10 +33,23 @@ legacy_popmaps_c_reference <- function(raster_surface,
       next
     }
 
-    geographic_order <- order(geographic_cell_distances[cell_idx, ])[seq_len(num_sites)]
-    temp_data <- rbind(coords[cell_idx, , drop = FALSE], sampling_loc_coords[geographic_order, , drop = FALSE])
-    cost_values <- as.numeric(gdistance::costDistance(species_surface, temp_data))[seq_len(num_sites)]
-    cell_order <- geographic_order[order(cost_values, na.last = TRUE)]
+    if (isTRUE(legacy_compat)) {
+      geographic_order <- order(geographic_cell_distances[cell_idx, ])[seq_len(num_sites)]
+      temp_data <- rbind(coords[cell_idx, , drop = FALSE], sampling_loc_coords[geographic_order, , drop = FALSE])
+      cost_values <- as.numeric(gdistance::costDistance(species_surface, temp_data))[seq_len(num_sites)]
+      cell_order <- geographic_order[order(cost_values, na.last = TRUE)]
+      cost_by_site <- rep(NA_real_, nrow(sampling_loc_coords))
+      cost_by_site[geographic_order] <- cost_values
+    } else {
+      temp_data <- rbind(coords[cell_idx, , drop = FALSE], sampling_loc_coords)
+      cost_values <- as.numeric(gdistance::costDistance(species_surface, temp_data))[seq_len(nrow(sampling_loc_coords))]
+      reachable_sites <- which(is.finite(cost_values))
+      if (length(reachable_sites) < num_sites) {
+        next
+      }
+      cell_order <- reachable_sites[order(cost_values[reachable_sites])][seq_len(num_sites)]
+      cost_by_site <- cost_values
+    }
     result[cell_idx, 1] <- hard_boundaries[cell_order[1]]
 
     if (raster_values[cell_idx] < threshold) {
@@ -52,8 +63,6 @@ legacy_popmaps_c_reference <- function(raster_surface,
       num_tested = num_tested
     )
 
-    cost_by_site <- rep(NA_real_, nrow(sampling_loc_coords))
-    cost_by_site[geographic_order] <- cost_values
     site_weights <- vapply(
       cost_by_site[selected_sites],
       function(distance) dist_prob_func(popmod, distance),
@@ -86,7 +95,7 @@ legacy_popmaps_c_reference <- function(raster_surface,
   append(output, axes)
 }
 
-test_that("popmaps C surfaces match the legacy gdistance engine on small rasters", {
+test_that("popmaps C surfaces match gdistance least-cost math on small rasters", {
   skip_if_not_installed("gdistance")
 
   surface_rast <- terra::rast(nrows = 4, ncols = 4, xmin = 0, xmax = 4, ymin = 0, ymax = 4)
@@ -117,7 +126,7 @@ test_that("popmaps C surfaces match the legacy gdistance engine on small rasters
     threshold = 0,
     ncore = 1
   )
-  legacy <- legacy_popmaps_c_reference(
+  legacy <- gdistance_popmaps_c_reference(
     raster_surface = raster_surface,
     species_data = popmaps2:::popmaps_prepare_locations(locs),
     empirical_pt_dist = 0,
@@ -160,11 +169,11 @@ test_that("popmaps C surfaces preserve NA cells and threshold hard boundaries", 
     ncore = 1
   )
 
-  expect_true(all(is.na(vapply(result, function(layer) layer[1, 1], numeric(1)))))
-  expect_false(is.na(result[[1]][1, 2]))
-  expect_true(is.na(result[[2]][1, 2]))
-  expect_true(is.na(result[[3]][1, 2]))
-  expect_true(is.na(result[[4]][1, 2]))
+  expect_true(all(is.na(vapply(result, function(layer) layer[1, 2], numeric(1)))))
+  expect_false(is.na(result[[1]][1, 3]))
+  expect_true(is.na(result[[2]][1, 3]))
+  expect_true(is.na(result[[3]][1, 3]))
+  expect_true(is.na(result[[4]][1, 3]))
 })
 
 test_that("popmaps C surfaces accept resistance rasters", {

@@ -21,13 +21,15 @@ test_that("tune_popmaps returns parameter summaries and fold diagnostics", {
   expect_true(all(tuning$results$failed_folds == 0))
   expect_true(all(tuning$results$n_validation_repeats == 1))
   expect_true(all(tuning$results$n_validation_folds == nrow(hija_struc)))
-  expect_true(all(tuning$results$half_distance_km > 0))
-  expect_true(all(tuning$results$ten_pct_distance_km > tuning$results$half_distance_km))
+  expect_true(all(tuning$results$half_distance > 0))
+  expect_true(all(tuning$results$ten_pct_distance > tuning$results$half_distance))
+  expect_equal(tuning$results$half_distance_km, tuning$results$half_distance)
+  expect_equal(tuning$results$ten_pct_distance_km, tuning$results$ten_pct_distance)
   expect_true(all(is.finite(tuning$results$rmse)))
   expect_true(all(is.finite(tuning$folds$predicted_axis_1)))
   expect_true(all(is.finite(tuning$folds$observed_axis_1)))
   expect_equal(
-    tuning$results$half_distance_km,
+    tuning$results$half_distance,
     log(0.5) / tuning$results$popmod
   )
 })

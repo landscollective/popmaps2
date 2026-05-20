@@ -35,10 +35,11 @@ movement barrier.}
 Non-zero, non-\code{NA} cells mark cells that should be treated as
 non-traversable in modern least-cost workflows.}
 
-\item{rescale_conductance}{Logical. If \code{TRUE}, rescale non-missing
-conductance values to the range 0-1 after any resistance conversion. The
-default is \code{FALSE} to preserve legacy POPMAPS behavior for MaxEnt logistic
-suitability rasters.}
+\item{rescale_conductance}{Logical. If \code{TRUE}, divide conductance by the
+largest non-missing conductance value after any resistance conversion. This
+preserves zero-valued barriers while putting the maximum conductance on a
+0-1 scale. The default is \code{FALSE} to preserve legacy POPMAPS behavior for
+MaxEnt logistic suitability rasters.}
 
 \item{resistance_epsilon}{Positive numeric scalar added to resistance values
 before inversion to avoid infinite conductance when resistance is zero.}

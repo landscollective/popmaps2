@@ -52,6 +52,14 @@ Important legacy details to preserve or make explicit:
   it should be controlled by a separate explicit option.
 - Missing raster values remain non-estimable cells and should not be silently
   converted to traversable habitat.
+- New `popmaps2` analyses should use actual raster cell centers. POPMAPS 1.03
+  included a cell-indexing workaround that duplicated the final row and column
+  of cell centers on some grids; that behavior is available only through
+  `legacy_compat = TRUE` for reproducibility checks.
+- New `surface = "C"` analyses should select candidate empirical sites by the
+  least-cost distance surface being modeled. POPMAPS 1.03 first narrowed the
+  candidate pool by geographic distance, then ordered that pool by least-cost
+  distance. That shortcut is retained only in `legacy_compat = TRUE`.
 
 ## Shared Ancestry Equation
 
@@ -121,6 +129,8 @@ repeatable predictive gain.
 The modern `surface = "C"` implementation should:
 
 - preserve legacy suitability-as-conductance behavior as the default;
+- use true raster cell centers for new analyses while keeping an explicit
+  legacy-compatibility path for POPMAPS 1.03 validation;
 - precompute least-cost distances from empirical sites to raster cells once per
   surface, then reuse those distances across tuning parameters and validation
   folds;
@@ -130,6 +140,8 @@ The modern `surface = "C"` implementation should:
   handling rule for zeros and missing cells;
 - compare modern least-cost distance and small-grid ancestry outputs against the
   legacy `gdistance` result;
+- select nearest candidate sites by least-cost distance for `surface = "C"`,
+  not by a geographic-distance prefilter, unless reproducing legacy output;
 - keep `threshold` as an output/prediction mask unless the user explicitly asks
   for thresholded cells to become movement barriers;
 - record the surface type and any transformation in tuning outputs so reports

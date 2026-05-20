@@ -53,8 +53,9 @@ reference distance for \code{popmod}.}
 
 \item{max_num_tested}{Maximum automatically suggested \code{num_tested} value.}
 
-\item{rescale_conductance}{Logical. If \code{TRUE}, rescale conductance values to
-0-1 before least-cost distances are calculated for \code{surface = "C"}.}
+\item{rescale_conductance}{Logical. If \code{TRUE}, scale conductance values by
+the largest non-missing conductance value before least-cost distances are
+calculated for \code{surface = "C"}.}
 
 \item{resistance_epsilon}{Positive numeric scalar added to resistance values
 before inversion when \code{surface_values = "resistance"}.}

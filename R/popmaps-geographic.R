@@ -5,24 +5,16 @@ popmaps_geographic_surface <- function(raster_surface,
                                        num_tested,
                                        popmod,
                                        threshold,
-                                       dist_prob_func) {
+                                       dist_prob_func,
+                                       legacy_compat = FALSE) {
   nrows <- raster_surface@nrows
   ncols <- raster_surface@ncols
-  ymax <- raster_surface@extent@ymax
-  xmin <- raster_surface@extent@xmin
-  cell_size <- raster::res(raster_surface)[1]
 
   num_axes <- ncol(species_data) - 3
   ancestry <- as.matrix(species_data[, seq.int(4, ncol(species_data)), drop = FALSE])
   sampling_loc_coords <- as.matrix(species_data[, 2:3, drop = FALSE])
 
-  coords <- popmaps_legacy_cell_coords(
-    nrows = nrows,
-    ncols = ncols,
-    xmin = xmin,
-    ymax = ymax,
-    cell_size = cell_size
-  )
+  coords <- popmaps_cell_coords(raster_surface, legacy_compat = legacy_compat)
   raster_values <- raster::extract(raster_surface, coords)
   cell_distances <- popmaps_cell_site_distances(coords, sampling_loc_coords)
   empirical_distances <- popmaps_empirical_site_distances(sampling_loc_coords)
@@ -85,6 +77,20 @@ popmaps_geographic_surface <- function(raster_surface,
   }
 
   append(output, axis_list)
+}
+
+popmaps_cell_coords <- function(raster_surface, legacy_compat = FALSE) {
+  if (isTRUE(legacy_compat)) {
+    return(popmaps_legacy_cell_coords(
+      nrows = raster_surface@nrows,
+      ncols = raster_surface@ncols,
+      xmin = raster_surface@extent@xmin,
+      ymax = raster_surface@extent@ymax,
+      cell_size = raster::res(raster_surface)[1]
+    ))
+  }
+
+  raster::xyFromCell(raster_surface, seq_len(raster::ncell(raster_surface)))
 }
 
 popmaps_legacy_cell_coords <- function(nrows, ncols, xmin, ymax, cell_size) {

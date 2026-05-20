@@ -7,6 +7,19 @@ test_that("raster inputs are normalized through terra", {
   expect_equal(dim(prepared$raster), dim(ex_raster))
 })
 
+test_that("modern cell coordinates use actual raster cell centers", {
+  r <- raster::raster(nrows = 3, ncols = 4, xmn = 0, xmx = 4, ymn = 0, ymx = 3)
+
+  modern <- popmaps2:::popmaps_cell_coords(r)
+  legacy <- popmaps2:::popmaps_cell_coords(r, legacy_compat = TRUE)
+
+  expect_equal(modern, raster::xyFromCell(r, seq_len(raster::ncell(r))), ignore_attr = TRUE)
+  expect_equal(modern[1, ], c(0.5, 2.5), ignore_attr = TRUE)
+  expect_equal(modern[raster::ncell(r), ], c(3.5, 0.5), ignore_attr = TRUE)
+  expect_false(identical(modern, legacy))
+  expect_true(any(duplicated(legacy)))
+})
+
 test_that("location inputs accept descriptive names", {
   locs <- hija_struc
   names(locs) <- c("site", "lon", "lat", "axis1", "axis2", "axis3")
@@ -123,4 +136,35 @@ test_that("popmaps preserves the legacy positional argument order", {
   positional <- popmaps(ex_raster, hija_struc, "G", 0, 5, 2, -0.05, 1, 0)
 
   expect_equal(positional, named)
+})
+
+test_that("legacy compatibility remains explicit and reproducible", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  modern <- popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    surface = "G",
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.05,
+    ncore = 1,
+    threshold = 0
+  )
+  legacy <- popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    surface = "G",
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = -0.05,
+    ncore = 1,
+    threshold = 0,
+    legacy_compat = TRUE
+  )
+
+  expect_false(identical(modern, legacy))
+  expect_equal(dim(modern[[1]]), dim(legacy[[1]]))
 })

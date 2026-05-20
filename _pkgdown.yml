@@ -13,7 +13,9 @@ articles:
 - title: Workflows
   navbar: Workflows
   contents:
+  - parameter-tuning
   - surface-comparison
+  - local-empirical-validation
 
 reference:
 - title: Core POPMAPS workflow

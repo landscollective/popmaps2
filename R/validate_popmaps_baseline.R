@@ -3,7 +3,9 @@
 #' @description Runs a small Hilaria jamesii ancestry probability surface and
 #' compares the result to a frozen POPMAPS 1.03 reference output bundled with
 #' the package. This is intended as a quick scientific regression check before
-#' deeper optimization work changes the modeling internals.
+#' deeper optimization work changes the modeling internals. The check runs
+#' [popmaps()] with `legacy_compat = TRUE` because POPMAPS 1.03 included a
+#' raster-cell indexing artifact that is preserved only for reproducibility.
 #'
 #' @param tolerance Numeric tolerance used when comparing current output to the
 #'   frozen reference output.
@@ -55,7 +57,8 @@ validate_popmaps_baseline <- function(tolerance = sqrt(.Machine$double.eps),
     num_tested = params$num_tested,
     popmod = params$popmod,
     threshold = params$threshold,
-    ncore = 1
+    ncore = 1,
+    legacy_compat = TRUE
   )
 
   comparison <- popmaps_compare_output(
