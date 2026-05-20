@@ -1,7 +1,18 @@
+# Shared helpers for scripts in tools/.
+#
+# These functions keep local validation and benchmarking scripts portable across
+# macOS, Linux, Windows, and common cluster schedulers. They deliberately use
+# only base R plus optional package checks so that the scripts can run before a
+# full development environment is configured.
+
+# Interpret common truthy environment-variable values consistently.
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
 
+# Read one finite numeric environment variable, falling back to a default when
+# the variable is unset or malformed. Scripts that need stricter validation add
+# their own checks after this helper returns.
 popmaps_numeric_env <- function(env, default = NA_real_) {
   value <- suppressWarnings(as.numeric(Sys.getenv(env, unset = as.character(default))))
   if (length(value) != 1 || is.na(value) || !is.finite(value)) {
@@ -11,6 +22,8 @@ popmaps_numeric_env <- function(env, default = NA_real_) {
   value
 }
 
+# Read one whole-number environment variable. This is used for settings such as
+# requested thread counts, block counts, and tuning grid sizes.
 popmaps_integer_env <- function(env, default = NA_integer_) {
   value <- popmaps_numeric_env(env, default)
   if (length(value) != 1 || is.na(value) || value != floor(value)) {
@@ -20,6 +33,9 @@ popmaps_integer_env <- function(env, default = NA_integer_) {
   as.integer(value)
 }
 
+# Return the first positive integer in a candidate vector. Scheduler and system
+# commands expose CPU counts in slightly different shapes, so this helper gives
+# the resource detector one stable normalization point.
 popmaps_first_positive_integer <- function(values) {
   values <- suppressWarnings(as.integer(values))
   values <- values[is.finite(values) & values > 0]
@@ -30,6 +46,9 @@ popmaps_first_positive_integer <- function(values) {
   values[[1]]
 }
 
+# Safely run a lightweight system command and return non-empty output lines.
+# Failure returns character(0), letting the resource detector try the next
+# platform-specific option.
 popmaps_command_output <- function(command, args = character()) {
   output <- tryCatch(
     suppressWarnings(system2(command, args = args, stdout = TRUE, stderr = FALSE)),
@@ -39,6 +58,9 @@ popmaps_command_output <- function(command, args = character()) {
   output[nzchar(output)]
 }
 
+# Detect logical processors from scheduler variables first, then OS commands.
+# This supports laptops as well as SLURM/PBS/SGE-style environments without
+# importing a parallel backend into the package.
 popmaps_available_threads <- function() {
   env_candidates <- c(
     "POPMAPS_AVAILABLE_THREADS",
@@ -76,6 +98,8 @@ popmaps_available_threads <- function() {
   1L
 }
 
+# Resolve explicit thread requests. Script-specific variables such as
+# POPMAPS_ASLO_THREADS take precedence over the global POPMAPS_THREADS value.
 popmaps_read_thread_request <- function(env_names, available_threads) {
   for (env in env_names) {
     raw_value <- Sys.getenv(env, unset = "")
@@ -102,6 +126,8 @@ popmaps_read_thread_request <- function(env_names, available_threads) {
   NULL
 }
 
+# Conservative default: use most, but not all, detected processors. Leaving a
+# processor free keeps local machines responsive during long raster runs.
 popmaps_default_threads <- function(available_threads) {
   fraction <- popmaps_numeric_env("POPMAPS_THREAD_FRACTION", 0.75)
   if (!is.finite(fraction) || fraction <= 0 || fraction > 1) {
@@ -115,12 +141,17 @@ popmaps_default_threads <- function(available_threads) {
   max(1L, min(available_threads - 1L, floor(available_threads * fraction)))
 }
 
+# Avoid overwriting thread or tempdir settings already chosen by the user,
+# scheduler, or calling process.
 popmaps_set_env_if_unset <- function(env, value) {
   if (!nzchar(Sys.getenv(env, unset = ""))) {
     do.call(Sys.setenv, as.list(stats::setNames(as.character(value), env)))
   }
 }
 
+# Configure shared resource settings for a validation/benchmark script.
+# Returns a small object that scripts append to their run-summary CSVs so each
+# output can be traced back to the compute settings used.
 popmaps_configure_script_resources <- function(script_prefix = NULL, quiet = FALSE) {
   available_threads <- popmaps_available_threads()
   prefix_thread_env <- if (is.null(script_prefix)) character() else paste0(script_prefix, "_THREADS")
@@ -191,6 +222,7 @@ popmaps_configure_script_resources <- function(script_prefix = NULL, quiet = FAL
   config
 }
 
+# Convert resource metadata into a one-row data frame for CSV summaries.
 popmaps_resource_row <- function(resource_config) {
   data.frame(
     available_threads = resource_config$available_threads,

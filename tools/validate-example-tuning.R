@@ -1,5 +1,24 @@
 #!/usr/bin/env Rscript
 
+# Empirical tuning validator for local example datasets.
+#
+# Purpose:
+# - find external `*_avg.asc` rasters and matching `*.txt` location tables;
+# - run either exhaustive grid tuning or adaptive tuning;
+# - write best-parameter, overview, range, and effect CSVs for later reporting.
+#
+# Usage:
+#   Rscript tools/validate-example-tuning.R input_dir output_dir
+#
+# Key environment controls:
+# - POPMAPS_EXAMPLE_SEARCH: `grid` or `adaptive`.
+# - POPMAPS_EXAMPLE_VALIDATION: comma-separated `loo` and/or `spatial_block`.
+# - POPMAPS_EXAMPLE_AGGREGATE: optional raster aggregation factor.
+# - POPMAPS_EXAMPLE_BLOCK_REPEATS: repeated spatial-block layouts.
+# - POPMAPS_EXAMPLE_WRITE_FOLDS: write fold-level output when true.
+
+# Find the shared helpers from the script path so the script works from any
+# current working directory.
 script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(script_file_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
@@ -9,10 +28,13 @@ script_dir <- if (length(script_file_arg)) {
 source(file.path(script_dir, "popmaps-script-utils.R"))
 resource_config <- popmaps_configure_script_resources("POPMAPS_EXAMPLE")
 
+# Keep a local truthy reader for script options that toggle optional outputs.
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
 
+# Positional arguments win over environment variables; defaults make the common
+# repository-adjacent `../popmaps_test_data` layout work without extra typing.
 read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -27,6 +49,8 @@ read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value
 }
 
+# Strict integer validation avoids accidental fractional settings in tuning
+# controls such as repeat counts and sample sizes.
 read_integer_env <- function(env, default, allow_zero = FALSE) {
   value <- as.numeric(Sys.getenv(env, unset = as.character(default)))
   if (
@@ -42,6 +66,7 @@ read_integer_env <- function(env, default, allow_zero = FALSE) {
   as.integer(value)
 }
 
+# Parse one or more validation modes from a comma-separated environment value.
 read_modes_env <- function(env, default) {
   modes <- strsplit(Sys.getenv(env, unset = default), ",", fixed = TRUE)[[1]]
   modes <- trimws(modes)
@@ -54,6 +79,8 @@ read_modes_env <- function(env, default) {
   unique(modes)
 }
 
+# Match every `species_avg.asc` raster to a sibling `species.txt` location file.
+# Raw empirical data remain outside the package repository.
 find_example_pairs <- function(input_dir) {
   rasters <- list.files(input_dir, pattern = "_avg[.]asc$", full.names = TRUE)
   rows <- lapply(rasters, function(raster_path) {
@@ -78,6 +105,8 @@ find_example_pairs <- function(input_dir) {
   do.call(rbind, rows)
 }
 
+# Use source loading during development and installed-package loading in clean
+# validation directories.
 load_popmaps2 <- function() {
   if (requireNamespace("pkgload", quietly = TRUE) && file.exists("DESCRIPTION")) {
     pkgload::load_all(".", quiet = TRUE)
@@ -94,11 +123,13 @@ load_popmaps2 <- function() {
   )
 }
 
+# Small CSV writer that also prints the path for long-running batch logs.
 write_table <- function(x, path) {
   utils::write.csv(x, path, row.names = FALSE)
   message("Wrote ", path)
 }
 
+# Resolve input/output locations and script-level controls before model runs.
 args <- commandArgs(trailingOnly = TRUE)
 default_input_dir <- file.path(dirname(getwd()), "popmaps_test_data")
 input_dir <- read_arg_or_env(args, 1, "POPMAPS_EXAMPLE_DIR", default = default_input_dir)
@@ -149,6 +180,8 @@ effect_rows <- list()
 for (row_idx in seq_len(nrow(pairs))) {
   species <- pairs$species[row_idx]
   message("Reading ", species)
+  # Optional aggregation provides a quick way to test the workflow before
+  # committing to full-resolution empirical rasters.
   raster_surface <- terra::rast(pairs$raster_path[row_idx])
   if (aggregate_fact > 1) {
     raster_surface <- terra::aggregate(raster_surface, fact = aggregate_fact, fun = mean, na.rm = TRUE)
@@ -161,6 +194,8 @@ for (row_idx in seq_len(nrow(pairs))) {
   grid <- popmaps2::suggest_tuning_grid(locations)
 
   for (validation in validation_modes) {
+    # Keep validation design explicit in every output prefix so LOO and
+    # spatial-block runs can coexist in the same output directory.
     message("Tuning ", species, " with validation = ", validation, " and search = ", search)
     tuning <- if (search == "adaptive") {
       popmaps2::adaptive_tune_popmaps(
@@ -197,6 +232,8 @@ for (row_idx in seq_len(nrow(pairs))) {
     )
     prefix <- paste(species, validation, search, run_stamp, sep = "-")
 
+    # Write detailed per-run outputs first, then collect compact cross-species
+    # summary rows for the aggregate CSVs at the end.
     write_table(tuning$results, file.path(output_dir, paste0(prefix, "-results.csv")))
     if (write_folds) {
       write_table(tuning$folds, file.path(output_dir, paste0(prefix, "-folds.csv")))
@@ -222,6 +259,7 @@ for (row_idx in seq_len(nrow(pairs))) {
   }
 }
 
+# Aggregate all species/validation rows into timestamped summary files.
 summary_table <- do.call(rbind, summary_rows)
 overview_table <- do.call(rbind, overview_rows)
 range_table <- do.call(rbind, range_rows)

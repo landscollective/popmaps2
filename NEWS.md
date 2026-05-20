@@ -37,3 +37,4 @@
 - Added input converter helpers: `surface_from_points()`, `locs_from_sf()`, `surfaces_from_raster_stack()`, `surface_from_eems()`, and `surface_from_feems()`.
 - Added a surface-comparison vignette and a bundled-data example script that uses `surface_from_points()` plus `write_surface_comparison_report()`.
 - Added a pkgdown scaffold, clearer vignette installation notes, and runnable examples for surface input converter help pages.
+- Added a manual pkgdown deployment workflow, reduced routine R-CMD-check triggers to pull requests/manual runs, cleaned the README, and annotated local validation scripts.
