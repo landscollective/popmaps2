@@ -73,10 +73,25 @@ install.packages("remotes")
 remotes::install_github("landscollective/popmaps2")
 ```
 
+To install the source vignette so `vignette("surface-comparison",
+package = "popmaps2")` works from the installed package, request vignette
+building explicitly:
+
+```r
+remotes::install_github(
+  "landscollective/popmaps2",
+  build_vignettes = TRUE,
+  dependencies = TRUE
+)
+```
+
+The vignette source is also available directly in
+`vignettes/surface-comparison.Rmd` for repository checkouts.
+
 For local development:
 
 ```r
-install.packages(c("raster", "sp", "terra", "igraph", "gtools", "maps", "plotrix", "MASS", "testthat"))
+install.packages(c("raster", "sp", "terra", "igraph", "gtools", "maps", "plotrix", "MASS", "testthat", "knitr", "rmarkdown", "pkgdown"))
 remotes::install_local(".")
 ```
 
@@ -366,6 +381,9 @@ A longer walkthrough is available in the vignette:
 vignette("surface-comparison", package = "popmaps2")
 ```
 
+For GitHub/source installs, build vignettes during installation or read the
+source file at `vignettes/surface-comparison.Rmd`.
+
 The legacy `jackknife()` function is still available for compatibility with
 `jackknife_viz()`.
 
@@ -473,6 +491,18 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | `ptsNpop()` | Assign provided sample points to inferred populations. |
 | `popmap_pca()` | Build environmental PCA rasters from environmental layers. |
 | `envplot()` | Visualize environmental space by inferred population. |
+
+## Documentation Website
+
+The repository now includes a `pkgdown` scaffold for a future public reference
+site. To preview it locally after installing development dependencies, run:
+
+```r
+pkgdown::build_site()
+```
+
+The intended public URL is <https://landscollective.github.io/popmaps2/> unless
+the project later moves under a Lands Collective organization account.
 
 ## Larger Local Validation
 

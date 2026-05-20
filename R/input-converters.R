@@ -35,6 +35,17 @@
 #'
 #' @return A `popmaps_surface` object.
 #'
+#' @examples
+#' coords <- data.frame(
+#'   site = paste0("s", 1:3),
+#'   lon = c(0, 1, 2),
+#'   lat = c(0, 1, 0),
+#'   axis1 = c(0.9, 0.5, 0.1),
+#'   axis2 = c(0.1, 0.5, 0.9)
+#' )
+#' geographic <- surface_from_points(coords, resolution = 1, buffer = 0)
+#' geographic
+#'
 #' @export
 surface_from_points <- function(points,
                                 coordinate_cols = NULL,
@@ -165,6 +176,20 @@ locs_from_sf <- function(x,
 #'
 #' @return A named list of `popmaps_surface` objects.
 #'
+#' @examples
+#' r1 <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2)
+#' terra::values(r1) <- c(0.2, 0.4, 0.6, 0.8)
+#' r2 <- r1 * 2
+#' names(r1) <- "suitability"
+#' names(r2) <- "resistance"
+#' candidates <- surfaces_from_raster_stack(
+#'   c(r1, r2),
+#'   surface = "C",
+#'   surface_values = c("suitability", "resistance"),
+#'   include_geographic = TRUE
+#' )
+#' names(candidates)
+#'
 #' @export
 surfaces_from_raster_stack <- function(input_raster,
                                        surface = "C",
@@ -236,6 +261,16 @@ surfaces_from_raster_stack <- function(input_raster,
 #'
 #' @return A `popmaps_surface` object.
 #'
+#' @examples
+#' eems_table <- expand.grid(x = 1:3, y = 1:3)
+#' eems_table$migration <- seq(0.2, 1, length.out = nrow(eems_table))
+#' eems_surface <- surface_from_eems(
+#'   eems_table,
+#'   value_col = "migration",
+#'   resolution = 1
+#' )
+#' eems_surface
+#'
 #' @export
 surface_from_eems <- function(input,
                               value_col = NULL,
@@ -276,6 +311,16 @@ surface_from_eems <- function(input,
 #' @inheritParams surface_from_eems
 #'
 #' @return A `popmaps_surface` object.
+#'
+#' @examples
+#' feems_table <- expand.grid(x = 1:3, y = 1:3)
+#' feems_table$w <- seq(0.2, 1, length.out = nrow(feems_table))
+#' feems_surface <- surface_from_feems(
+#'   feems_table,
+#'   value_col = "w",
+#'   resolution = 1
+#' )
+#' feems_surface
 #'
 #' @export
 surface_from_feems <- function(input,

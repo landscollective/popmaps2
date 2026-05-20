@@ -71,3 +71,14 @@ tables to a \code{surface = "C"} POPMAPS surface. For tabular FEEMS exports, edg
 or node weights where larger values imply easier movement should usually be
 treated as conductance.
 }
+\examples{
+feems_table <- expand.grid(x = 1:3, y = 1:3)
+feems_table$w <- seq(0.2, 1, length.out = nrow(feems_table))
+feems_surface <- surface_from_feems(
+  feems_table,
+  value_col = "w",
+  resolution = 1
+)
+feems_surface
+
+}

@@ -72,3 +72,14 @@ coordinates plus one numeric surface-value column. High migration values
 should usually be treated as conductance; effective resistance-style outputs
 can be passed with \code{surface_values = "resistance"}.
 }
+\examples{
+eems_table <- expand.grid(x = 1:3, y = 1:3)
+eems_table$migration <- seq(0.2, 1, length.out = nrow(eems_table))
+eems_surface <- surface_from_eems(
+  eems_table,
+  value_col = "migration",
+  resolution = 1
+)
+eems_surface
+
+}

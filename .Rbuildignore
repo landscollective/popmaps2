@@ -1,6 +1,8 @@
 ^\.github$
 ^\.git$
 ^\.gitignore$
+^_pkgdown\.yml$
+^docs$
 ^README\.Rmd$
 ^popmaps2\.Rproj$
 ^ROADMAP\.md$

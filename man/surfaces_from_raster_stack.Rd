@@ -63,3 +63,18 @@ into a named \code{popmaps_surface} object. This is a convenience helper for
 comparing several user-supplied candidate surfaces with
 \code{\link[=compare_popmaps_surfaces]{compare_popmaps_surfaces()}}.
 }
+\examples{
+r1 <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2)
+terra::values(r1) <- c(0.2, 0.4, 0.6, 0.8)
+r2 <- r1 * 2
+names(r1) <- "suitability"
+names(r2) <- "resistance"
+candidates <- surfaces_from_raster_stack(
+  c(r1, r2),
+  surface = "C",
+  surface_values = c("suitability", "resistance"),
+  include_geographic = TRUE
+)
+names(candidates)
+
+}
