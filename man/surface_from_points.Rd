@@ -76,3 +76,15 @@ raster yet. A constant conductance surface can also be created with
 \code{surface = "C"}, but that is a neutral grid rather than a biologically
 informed landscape surface.
 }
+\examples{
+coords <- data.frame(
+  site = paste0("s", 1:3),
+  lon = c(0, 1, 2),
+  lat = c(0, 1, 0),
+  axis1 = c(0.9, 0.5, 0.1),
+  axis2 = c(0.1, 0.5, 0.9)
+)
+geographic <- surface_from_points(coords, resolution = 1, buffer = 0)
+geographic
+
+}

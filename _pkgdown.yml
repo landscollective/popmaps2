@@ -1,0 +1,62 @@
+url: https://landscollective.github.io/popmaps2/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [github]
+
+articles:
+- title: Workflows
+  navbar: Workflows
+  contents:
+  - surface-comparison
+
+reference:
+- title: Core POPMAPS workflow
+  contents:
+  - popmaps
+  - popmaps_rast
+  - write_popmaps
+  - anc_extract
+  - validate_popmaps_baseline
+
+- title: Tuning and surface comparison
+  contents:
+  - tune_popmaps
+  - adaptive_tune_popmaps
+  - diagnose_tuning
+  - suggest_tuning_grid
+  - suggest_surface_tuning_grid
+  - compare_popmaps_surfaces
+  - plot_surface_comparison
+  - write_surface_comparison_report
+
+- title: Input preparation
+  contents:
+  - prepare_popmaps_surface
+  - surface_from_points
+  - locs_from_sf
+  - surfaces_from_raster_stack
+  - surface_from_eems
+  - surface_from_feems
+
+- title: Legacy compatibility and visualization
+  contents:
+  - jackknife
+  - jackknife_viz
+  - popmap_viz
+  - ptsNpop
+  - bg_pop_pts
+  - popmap_pca
+  - envplot
+
+- title: Example data
+  contents:
+  - hija_raster
+  - hija_struc
+  - hija_herb
+  - hija_fst
