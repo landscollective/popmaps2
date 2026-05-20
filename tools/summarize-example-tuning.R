@@ -1,5 +1,20 @@
 #!/usr/bin/env Rscript
 
+# Summarize empirical tuning outputs.
+#
+# Purpose:
+# - read the latest CSV bundle produced by `validate-example-tuning.R`;
+# - create cross-species summary tables;
+# - draw diagnostic figures for validation score, near-best support, decay
+#   scales, and parameter effects;
+# - write a compact Markdown report for interpretation.
+#
+# Usage:
+#   Rscript tools/summarize-example-tuning.R tuning_output_dir report_dir
+#
+# This script does not rerun models. It only summarizes existing tuning CSVs.
+
+# Resolve shared utilities from this script location when available.
 script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(script_file_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
@@ -9,6 +24,7 @@ script_dir <- if (length(script_file_arg)) {
 source(file.path(script_dir, "popmaps-script-utils.R"))
 resource_config <- popmaps_configure_script_resources("POPMAPS_TUNING")
 
+# Positional argument, environment variable, default: in that order.
 read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -23,6 +39,8 @@ read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value
 }
 
+# Pick the newest matching CSV so users can point at a tuning output directory
+# without manually copying timestamped filenames.
 latest_file <- function(output_dir, pattern) {
   files <- list.files(output_dir, pattern = pattern, full.names = TRUE)
   if (length(files) < 1) {
@@ -32,15 +50,18 @@ latest_file <- function(output_dir, pattern) {
   files[which.max(file.info(files)$mtime)]
 }
 
+# Use stable CSV options across all report inputs.
 read_csv <- function(path) {
   utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
 }
 
+# CSV writer that also logs artifact paths during report generation.
 write_table <- function(x, path) {
   utils::write.csv(x, path, row.names = FALSE)
   message("Wrote ", path)
 }
 
+# Translate the breadth of near-best support into a compact interpretation.
 support_label <- function(n_near_best, near_best_fraction) {
   ifelse(
     n_near_best <= 1 | near_best_fraction <= 0.10,
@@ -49,6 +70,7 @@ support_label <- function(n_near_best, near_best_fraction) {
   )
 }
 
+# Combine performance improvement and support breadth into a rough signal label.
 tuning_signal <- function(best_vs_median_percent, support) {
   ifelse(
     best_vs_median_percent >= 25 & support == "sharp",
@@ -57,6 +79,7 @@ tuning_signal <- function(best_vs_median_percent, support) {
   )
 }
 
+# Small Markdown table renderer for the final report.
 markdown_table <- function(x, columns) {
   x <- x[, columns, drop = FALSE]
   x[] <- lapply(x, function(value) {
@@ -73,15 +96,19 @@ markdown_table <- function(x, columns) {
   c(header, divider, rows)
 }
 
+# Keep species ordering consistent across plots.
 ordered_species <- function(x) {
   sort(unique(x$species))
 }
 
+# Fixed validation colors make reports easier to compare across repeated runs.
 validation_colors <- function(validation) {
   colors <- c(loo = "#1f77b4", spatial_block = "#d95f02")
   stats::setNames(colors[validation], validation)
 }
 
+# Plot best validation score by species. When repeated spatial blocks are
+# available, show repeat-level standard deviation as error bars.
 plot_best_score <- function(summary, path) {
   species <- ordered_species(summary)
   validations <- unique(summary$validation)
@@ -131,6 +158,8 @@ plot_best_score <- function(summary, path) {
   graphics::legend("topright", legend = validations, pch = 19, col = colors, bty = "n")
 }
 
+# Plot the fraction of evaluated parameter combinations within the near-best
+# tolerance; smaller fractions indicate sharper parameter support.
 plot_near_best <- function(summary, path) {
   species <- ordered_species(summary)
   validations <- unique(summary$validation)
@@ -163,6 +192,7 @@ plot_near_best <- function(summary, path) {
   graphics::legend("topright", legend = validations, fill = colors, bty = "n")
 }
 
+# Plot interpretable distance-decay scales for the best parameter combination.
 plot_decay <- function(summary, path) {
   decay <- summary[is.finite(summary$half_distance_km) & is.finite(summary$ten_pct_distance_km), , drop = FALSE]
   species <- ordered_species(decay)
@@ -201,6 +231,8 @@ plot_decay <- function(summary, path) {
   )
 }
 
+# Plot mean loss from the best score across each parameter value. This helps
+# diagnose whether tuning is sensitive to parameter changes.
 plot_parameter_effects <- function(effects, path) {
   effects <- effects[is.finite(effects$value) & is.finite(effects$loss_from_best), , drop = FALSE]
   parameters <- unique(effects$parameter)
@@ -254,6 +286,7 @@ plot_parameter_effects <- function(effects, path) {
   graphics::legend("bottom", legend = species, col = species_colors, pch = 19, horiz = TRUE, bty = "n", cex = 0.8)
 }
 
+# Resolve the output bundle to summarize and create the report directory.
 args <- commandArgs(trailingOnly = TRUE)
 output_dir <- read_arg_or_env(args, 1, "POPMAPS_TUNING_OUTPUT_DIR")
 report_dir <- read_arg_or_env(
@@ -289,6 +322,7 @@ summary <- merge(
   by = c("species", "search", "validation"),
   suffixes = c("", "_overview")
 )
+# Add derived interpretation fields used in both CSV and Markdown outputs.
 summary$near_best_fraction <- summary$n_near_best / summary$n_evaluated
 summary$best_score_repeat_sd <- vapply(seq_len(nrow(summary)), function(row_idx) {
   metric_sd_col <- paste0(summary$primary_metric[row_idx], "_repeat_sd")
@@ -303,6 +337,9 @@ summary$tuning_signal <- tuning_signal(summary$best_vs_median_percent, summary$s
 summary <- summary[order(summary$validation, summary$species), , drop = FALSE]
 
 diversity_rows <- lapply(split(summary, summary$validation), function(rows) {
+  # Count how many distinct best-parameter signatures appear across species.
+  # If every species chooses the same parameters, tuning may be less informative
+  # than expected; diversity here supports species-specific tuning.
   signatures <- paste(
     rows$num_sites,
     rows$num_tested,
@@ -324,6 +361,8 @@ diversity_rows <- lapply(split(summary, summary$validation), function(rows) {
 parameter_diversity <- do.call(rbind, diversity_rows)
 rownames(parameter_diversity) <- NULL
 
+# Write the cleaned summary tables before plotting so partial report generation
+# still leaves useful CSV outputs if plotting fails.
 write_table(summary, file.path(report_dir, "empirical-tuning-summary.csv"))
 write_table(parameter_diversity, file.path(report_dir, "empirical-tuning-parameter-diversity.csv"))
 write_table(parameter_ranges, file.path(report_dir, "empirical-tuning-parameter-ranges.csv"))

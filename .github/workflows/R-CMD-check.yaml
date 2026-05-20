@@ -1,18 +1,13 @@
-on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/R-CMD-check.yaml"
-      - "DESCRIPTION"
-      - "NAMESPACE"
-      - "R/**"
-      - "data/**"
-      - "inst/**"
-      - "man/**"
-      - "tests/**"
+name: R-CMD-check
+
+"on":
+  # Run routine package checks on pull requests only. The PR check is the gate;
+  # skipping the post-merge push run avoids spending minutes on the same commit
+  # twice after a squash merge.
   pull_request:
     branches: [main]
     paths:
+      - ".Rbuildignore"
       - ".github/workflows/R-CMD-check.yaml"
       - "DESCRIPTION"
       - "NAMESPACE"
@@ -21,6 +16,7 @@ on:
       - "inst/**"
       - "man/**"
       - "tests/**"
+      - "vignettes/**"
   workflow_dispatch:
     inputs:
       run_macos:
@@ -28,8 +24,6 @@ on:
         required: false
         type: boolean
         default: false
-
-name: R-CMD-check
 
 permissions:
   contents: read

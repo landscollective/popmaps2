@@ -1,5 +1,26 @@
 #!/usr/bin/env Rscript
 
+# Empirical candidate-surface comparison for local example datasets.
+#
+# Purpose:
+# - find external `*_avg.asc` rasters and matching `*.txt` location tables;
+# - prepare a geographic `G` surface and SDM suitability `C` surface per species;
+# - optionally add the inverse/resistance interpretation of the same SDM raster;
+# - run matched validation across candidate surfaces;
+# - write per-species reports plus cross-species summary tables and figures.
+#
+# Usage:
+#   Rscript tools/compare-example-surfaces.R input_dir output_dir
+#
+# Key environment controls:
+# - POPMAPS_SURFACE_VALIDATION: comma-separated `loo` and/or `spatial_block`.
+# - POPMAPS_SURFACE_AGGREGATE: raster aggregation factor for trial runs.
+# - POPMAPS_SURFACE_BLOCK_REPEATS: repeated spatial-block layouts.
+# - POPMAPS_SURFACE_INCLUDE_INVERSE: include SDM-as-resistance diagnostic.
+# - POPMAPS_SURFACE_SPECIES: optional comma-separated species subset.
+
+# Resolve shared utilities relative to this file when possible so the script can
+# run from outside the repository root.
 script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(script_file_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
@@ -9,10 +30,13 @@ script_dir <- if (length(script_file_arg)) {
 source(file.path(script_dir, "popmaps-script-utils.R"))
 resource_config <- popmaps_configure_script_resources("POPMAPS_SURFACE")
 
+# Local truthy parser for opt-in diagnostics and optional large outputs.
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
 
+# Positional argument, environment variable, default: in that order. This makes
+# local command-line use and scheduled batch use share the same script.
 read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -27,6 +51,7 @@ read_arg_or_env <- function(args, index, env, required = TRUE, default = NULL) {
   value
 }
 
+# Strict readers for user-provided environment controls.
 read_integer_env <- function(env, default, allow_zero = FALSE) {
   value <- as.numeric(Sys.getenv(env, unset = as.character(default)))
   if (
@@ -51,6 +76,8 @@ read_numeric_env <- function(env, default, lower = -Inf) {
   value
 }
 
+# Validation modes are comma-separated so one run can produce LOO and
+# spatial-block summaries in the same output directory.
 read_modes_env <- function(env, default) {
   modes <- strsplit(Sys.getenv(env, unset = default), ",", fixed = TRUE)[[1]]
   modes <- trimws(modes)
@@ -63,12 +90,16 @@ read_modes_env <- function(env, default) {
   unique(modes)
 }
 
+# Optional species filter for faster targeted reruns after one species fails or
+# after a new empirical dataset is added.
 read_species_env <- function(env) {
   species <- strsplit(Sys.getenv(env, unset = ""), ",", fixed = TRUE)[[1]]
   species <- trimws(species)
   species[nzchar(species)]
 }
 
+# Match external rasters to location tables without requiring raw empirical data
+# to live inside the package repository.
 find_example_pairs <- function(input_dir, species_filter = character()) {
   rasters <- list.files(input_dir, pattern = "_avg[.]asc$", full.names = TRUE)
   rows <- lapply(rasters, function(raster_path) {
@@ -97,6 +128,8 @@ find_example_pairs <- function(input_dir, species_filter = character()) {
   pairs[order(pairs$species), , drop = FALSE]
 }
 
+# Prefer source loading in a repository checkout; fall back to installed package
+# use for clean validation environments.
 load_popmaps2 <- function() {
   if (requireNamespace("pkgload", quietly = TRUE) && file.exists("DESCRIPTION")) {
     pkgload::load_all(".", quiet = TRUE)
@@ -113,11 +146,15 @@ load_popmaps2 <- function() {
   )
 }
 
+# Small output helper used for every CSV so long logs show where each artifact
+# was written.
 write_table <- function(x, path) {
   utils::write.csv(x, path, row.names = FALSE)
   message("Wrote ", path)
 }
 
+# Minimal Markdown table renderer for the script-level summary report. The
+# detailed per-comparison reports are produced by popmaps2 itself.
 markdown_table <- function(x, columns) {
   x <- x[, columns, drop = FALSE]
   x[] <- lapply(x, function(value) {
@@ -134,16 +171,20 @@ markdown_table <- function(x, columns) {
   c(header, divider, rows)
 }
 
+# Suggest a compact but useful num_sites grid from the number of empirical
+# locations. This keeps empirical example runs tractable by default.
 default_num_sites <- function(n_locations, max_num_sites) {
   n_training <- n_locations - 1L
   candidates <- unique(c(5L, round(n_training * 0.5), min(max_num_sites, n_training), n_training))
   sort(candidates[candidates >= 2L & candidates <= n_training])
 }
 
+# Candidate `num_tested` values must not exceed the available `num_sites`.
 default_num_tested <- function(num_sites, max_num_tested) {
   seq.int(2L, min(max_num_tested, min(num_sites)))
 }
 
+# Store the exact surface-specific tuning grid used for each comparison.
 flatten_grid <- function(grid, species, validation, surface_name) {
   data.frame(
     species = species,
@@ -161,6 +202,8 @@ flatten_grid <- function(grid, species, validation, surface_name) {
   )
 }
 
+# Convert the report manifest returned by popmaps2 into one row for the
+# cross-species report index.
 flatten_report_manifest <- function(manifest, species, validation) {
   data.frame(
     species = species,
@@ -175,6 +218,8 @@ flatten_report_manifest <- function(manifest, species, validation) {
   )
 }
 
+# Plot primary validation scores across species and validation modes. Lower RMSE
+# is better for the default primary metric.
 plot_surface_scores <- function(summary, path) {
   species <- sort(unique(summary$species))
   validations <- unique(summary$validation)
@@ -211,6 +256,8 @@ plot_surface_scores <- function(summary, path) {
   }
 }
 
+# Plot relative support gaps. Values near zero are competitive with the best
+# surface for that species/validation design.
 plot_percent_from_best <- function(summary, path) {
   species <- sort(unique(summary$species))
   validations <- unique(summary$validation)
@@ -245,6 +292,7 @@ plot_percent_from_best <- function(summary, path) {
   }
 }
 
+# Resolve input/output locations and model controls before reading rasters.
 args <- commandArgs(trailingOnly = TRUE)
 default_input_dir <- file.path(dirname(getwd()), "popmaps_test_data")
 input_dir <- read_arg_or_env(args, 1, "POPMAPS_SURFACE_EXAMPLE_DIR", default = default_input_dir)
@@ -289,6 +337,8 @@ report_rows <- list()
 for (row_idx in seq_len(nrow(pairs))) {
   species <- pairs$species[row_idx]
   message("Reading ", species)
+  # Aggregate first so every candidate surface for this species uses identical
+  # geometry and a controlled problem size.
   raster_surface <- terra::rast(pairs$raster_path[row_idx])
   if (aggregate_fact > 1) {
     raster_surface <- terra::aggregate(raster_surface, fact = aggregate_fact, fun = mean, na.rm = TRUE)
@@ -301,6 +351,9 @@ for (row_idx in seq_len(nrow(pairs))) {
   num_sites <- default_num_sites(nrow(locations), max_num_sites = max_num_sites)
   num_tested <- default_num_tested(num_sites, max_num_tested = max_num_tested)
 
+  # Compare the neutral geographic hypothesis against the SDM-as-suitability
+  # landscape hypothesis. The inverse/resistance interpretation is opt-in
+  # because it is diagnostic rather than a default biological assumption.
   surfaces <- list(
     geographic = popmaps2::prepare_popmaps_surface(raster_surface, surface = "G"),
     sdm_suitability = popmaps2::prepare_popmaps_surface(
@@ -318,6 +371,8 @@ for (row_idx in seq_len(nrow(pairs))) {
   }
 
   for (validation in validation_modes) {
+    # Errors are caught per species/validation pair so a single failed dataset
+    # does not discard all other completed comparisons.
     message("Comparing surfaces for ", species, " with validation = ", validation)
     comparison <- tryCatch(
       popmaps2::compare_popmaps_surfaces(
@@ -335,6 +390,8 @@ for (row_idx in seq_len(nrow(pairs))) {
       error = function(err) err
     )
 
+    # If a comparison failed, write a support row with the error message and
+    # continue to the next species/validation pair.
     prefix <- paste(species, validation, "surface-comparison", run_stamp, sep = "-")
     if (inherits(comparison, "error")) {
       support <- data.frame(
@@ -366,6 +423,8 @@ for (row_idx in seq_len(nrow(pairs))) {
       next
     }
 
+    # Successful comparisons get the standard popmaps2 report bundle plus
+    # compact rows for the cross-species summary files below.
     comparison_report_dir <- file.path(output_dir, "comparisons", prefix)
     report_manifest <- popmaps2::write_surface_comparison_report(
       comparison = comparison,
@@ -398,6 +457,7 @@ for (row_idx in seq_len(nrow(pairs))) {
   }
 }
 
+# Write aggregate CSVs after all per-species comparisons finish.
 summary_table <- if (length(summary_rows) > 0) do.call(rbind, summary_rows) else data.frame()
 support_table <- if (length(support_rows) > 0) do.call(rbind, support_rows) else data.frame()
 grid_table <- if (length(grid_rows) > 0) do.call(rbind, grid_rows) else data.frame()
@@ -434,6 +494,8 @@ figure_dir <- file.path(report_dir, "figures")
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
 
 if (nrow(summary_table) > 0) {
+  # Script-level figures summarize all species in one place; per-comparison
+  # figures are already written in the individual report folders.
   plot_surface_scores(summary_table, file.path(figure_dir, "surface-validation-scores.png"))
   plot_percent_from_best(summary_table, file.path(figure_dir, "surface-percent-from-best.png"))
 }

@@ -1,5 +1,23 @@
 #!/usr/bin/env Rscript
 
+# Local ASLO runtime and memory benchmark.
+#
+# Purpose:
+# - run `popmaps()` across one or more raster aggregation factors;
+# - compare `surface = "G"` and `surface = "C"` runtimes when requested;
+# - record elapsed time, coarse R memory, raster size, and resource settings.
+#
+# Usage:
+#   Rscript tools/benchmark-aslo-local.R aslo_avg.asc aslo.txt output_dir
+#
+# Key environment controls:
+# - POPMAPS_BENCH_AGGREGATES: comma-separated aggregate factors, e.g. 16,4,1.
+# - POPMAPS_BENCH_SURFACES: comma-separated surfaces, e.g. G,C.
+# - POPMAPS_BENCH_NUM_SITES, POPMAPS_BENCH_NUM_TESTED, POPMAPS_BENCH_POPMOD:
+#   interpolation parameters held constant across benchmark rows.
+
+# Resolve the shared tools directory whether called from the repository root or
+# another working directory.
 script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(script_file_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
@@ -9,6 +27,8 @@ script_dir <- if (length(script_file_arg)) {
 source(file.path(script_dir, "popmaps-script-utils.R"))
 resource_config <- popmaps_configure_script_resources("POPMAPS_BENCH")
 
+# Argument/environment readers fail early when benchmark settings are malformed;
+# this avoids spending time on a run that cannot be compared later.
 read_arg_or_env <- function(args, index, env, label, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -50,6 +70,7 @@ read_integer_env <- function(env, default) {
   as.integer(value)
 }
 
+# Read comma-separated controls such as aggregation factors and surface modes.
 read_csv_values <- function(env, default, numeric = FALSE) {
   values <- strsplit(Sys.getenv(env, unset = default), ",", fixed = TRUE)[[1]]
   values <- trimws(values)
@@ -67,6 +88,8 @@ read_csv_values <- function(env, default, numeric = FALSE) {
   values
 }
 
+# Prefer source loading during development, but allow installed-package use from
+# a fresh clone or external validation directory.
 load_popmaps2 <- function() {
   if (requireNamespace("pkgload", quietly = TRUE) && file.exists("DESCRIPTION")) {
     pkgload::load_all(".", quiet = TRUE)
@@ -83,11 +106,14 @@ load_popmaps2 <- function() {
   )
 }
 
+# Extract the garbage collector's current maximum memory column in MB. This is a
+# coarse signal, not a full profiler, but is useful across repeated runs.
 gc_max_mb <- function() {
   gc_result <- gc()
   sum(gc_result[, 7], na.rm = TRUE)
 }
 
+# Summarize the returned POPMAPS list without converting every layer to files.
 summarize_result <- function(result) {
   data.frame(
     output_layers = length(result),
@@ -99,6 +125,7 @@ summarize_result <- function(result) {
   )
 }
 
+# Resolve inputs, outputs, and fixed model settings before reading rasters.
 args <- commandArgs(trailingOnly = TRUE)
 raster_path <- read_arg_or_env(args, 1, "POPMAPS_BENCH_RASTER", "ASLO raster path")
 locations_path <- read_arg_or_env(args, 2, "POPMAPS_BENCH_LOCS", "ASLO locations path")
@@ -136,6 +163,8 @@ num_tested <- read_integer_env("POPMAPS_BENCH_NUM_TESTED", 4)
 popmod <- read_numeric_env("POPMAPS_BENCH_POPMOD", -0.05)
 threshold <- read_numeric_env("POPMAPS_BENCH_THRESHOLD", 0)
 
+# Read the base raster once and aggregate inside the loop. This makes the
+# benchmark rows comparable and avoids repeated disk reads for each surface.
 message("Reading ASLO raster: ", raster_path)
 base_raster <- terra::rast(raster_path)
 message("Reading ASLO locations: ", locations_path)
@@ -149,6 +178,9 @@ locations <- utils::read.table(
 rows <- list()
 row_idx <- 1L
 for (aggregate_fact in aggregate_facts) {
+  # Each aggregation factor represents a different problem size. The full
+  # raster can be included with aggregate factor 1 when the machine can handle
+  # it.
   raster_surface <- base_raster
   if (aggregate_fact > 1) {
     message("Aggregating raster by factor ", aggregate_fact)
@@ -161,6 +193,8 @@ for (aggregate_fact in aggregate_facts) {
   raster_non_na <- sum(!is.na(terra::values(raster_surface, mat = FALSE)))
 
   for (surface in surfaces) {
+    # Run each requested surface on the same raster/problem size. Errors are
+    # captured into the output table so long benchmark sweeps can continue.
     message("Benchmarking aggregate=", aggregate_fact, ", surface=", surface)
     gc(reset = TRUE)
     result <- NULL

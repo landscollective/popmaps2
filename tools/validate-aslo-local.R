@@ -1,5 +1,26 @@
 #!/usr/bin/env Rscript
 
+# Local ASLO validation runner.
+#
+# Purpose:
+# - run `popmaps()` on an external ASLO raster/location pair;
+# - optionally aggregate the raster for faster trial runs;
+# - summarize output layers without committing raw empirical files;
+# - optionally write GeoTIFFs or an RDS debugging bundle.
+#
+# Usage:
+#   Rscript tools/validate-aslo-local.R aslo_avg.asc aslo.txt output_dir
+#
+# Key environment controls:
+# - POPMAPS_ASLO_AGGREGATE: aggregate factor applied before modeling.
+# - POPMAPS_ASLO_SURFACE: `G` or `C`.
+# - POPMAPS_ASLO_NUM_SITES, POPMAPS_ASLO_NUM_TESTED, POPMAPS_ASLO_POPMOD:
+#   interpolation parameters.
+# - POPMAPS_ASLO_WRITE_RASTERS: write GeoTIFF layers when true.
+# - POPMAPS_ASLO_SAVE_RDS: save full result object when true.
+
+# Locate the shared script utilities from the script path when available. The
+# fallback supports interactive runs from the repository root.
 script_file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 script_dir <- if (length(script_file_arg)) {
   dirname(normalizePath(sub("^--file=", "", script_file_arg[[1]]), mustWork = TRUE))
@@ -9,10 +30,14 @@ script_dir <- if (length(script_file_arg)) {
 source(file.path(script_dir, "popmaps-script-utils.R"))
 resource_config <- popmaps_configure_script_resources("POPMAPS_ASLO")
 
+# Local truthy helper kept here so this script remains readable when scanning
+# only the file itself.
 truthy_env <- function(x) {
   tolower(x) %in% c("1", "true", "t", "yes", "y")
 }
 
+# Read one positional argument or matching environment variable. This pattern
+# makes the script friendly to both command-line use and scheduled cluster jobs.
 read_arg_or_env <- function(args, index, env, label, required = TRUE, default = NULL) {
   value <- if (length(args) >= index && nzchar(args[[index]])) {
     args[[index]]
@@ -36,6 +61,8 @@ read_arg_or_env <- function(args, index, env, label, required = TRUE, default = 
   value
 }
 
+# Strict numeric readers keep invalid environment settings from silently
+# producing an unexpected model run.
 read_numeric_env <- function(env, default) {
   value <- as.numeric(Sys.getenv(env, unset = as.character(default)))
   if (length(value) != 1 || is.na(value) || !is.finite(value)) {
@@ -54,6 +81,9 @@ read_integer_env <- function(env, default) {
   as.integer(value)
 }
 
+# Summarize raster outputs without writing large rasters by default. This is
+# enough for smoke validation and for comparing dimensions/value ranges between
+# runs.
 summarize_layers <- function(raster_output) {
   rows <- vector("list", terra::nlyr(raster_output))
 
@@ -76,6 +106,7 @@ summarize_layers <- function(raster_output) {
   do.call(rbind, rows)
 }
 
+# Resolve paths and model settings before doing any expensive raster work.
 args <- commandArgs(trailingOnly = TRUE)
 
 raster_path <- read_arg_or_env(args, 1, "POPMAPS_ASLO_RASTER", "ASLO raster path")
@@ -116,6 +147,8 @@ ncore <- read_integer_env("POPMAPS_ASLO_NCORE", resource_config$threads)
 write_rasters <- truthy_env(Sys.getenv("POPMAPS_ASLO_WRITE_RASTERS", unset = "false"))
 save_rds <- truthy_env(Sys.getenv("POPMAPS_ASLO_SAVE_RDS", unset = "false"))
 
+# Load and optionally aggregate the external raster. Aggregation is the main
+# knob for making large empirical datasets practical during development checks.
 message("Reading ASLO raster: ", raster_path)
 raster_surface <- terra::rast(raster_path)
 if (aggregate_fact > 1) {
@@ -131,6 +164,8 @@ locations <- utils::read.table(
   stringsAsFactors = FALSE
 )
 
+# Run the actual ancestry interpolation and capture elapsed/user/system time for
+# repeatable performance notes.
 message("Running popmaps2 validation")
 runtime <- system.time({
   result <- popmaps2::popmaps(
@@ -149,6 +184,8 @@ runtime <- system.time({
 raster_output <- popmaps2::popmaps_rast(result, raster_surface)
 layer_summary <- summarize_layers(raster_output)
 
+# Write compact summaries first. Optional large outputs are written below only
+# when explicitly requested.
 run_summary <- data.frame(
   created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
   raster_path = raster_path,
@@ -175,6 +212,8 @@ utils::write.csv(layer_summary, layer_summary_path, row.names = FALSE)
 
 manifest <- NULL
 if (write_rasters) {
+  # GeoTIFF export is opt-in because full-resolution empirical rasters can be
+  # large and are usually not needed for routine smoke checks.
   raster_dir <- file.path(output_dir, "rasters")
   manifest <- popmaps2::write_popmaps(
     pop_raster_list = result,
@@ -187,6 +226,7 @@ if (write_rasters) {
 }
 
 if (save_rds) {
+  # RDS export is for debugging only; it may contain a large in-memory result.
   saveRDS(
     list(
       run_summary = run_summary,
