@@ -122,13 +122,30 @@ resistance_surface <- prepare_popmaps_surface(
 )
 ```
 
+Convenience converters are available when inputs are not already in the exact
+single-raster shape:
+
+```r
+point_surface <- surface_from_points(hija_struc, resolution = 0.01)
+
+candidate_surfaces <- surfaces_from_raster_stack(
+  input_raster = multi_layer_raster,
+  surface = "C",
+  surface_values = c("suitability", "conductance", "resistance"),
+  include_geographic = TRUE
+)
+
+eems_surface <- surface_from_eems(eems_table, value_col = "migration")
+feems_surface <- surface_from_feems(feems_table, value_col = "w")
+```
+
 `surface_values = "suitability"` and `"conductance"` use raster values directly.
 `surface_values = "resistance"` converts values to conductance with an inverse
 transform. EEMS/FEEMS-derived gene-flow surfaces should usually be treated as
-conductance-like inputs after they are exported to a supported raster or distance
-format. Running SDMs, EEMS/FEEMS, Circuitscape, or ResistanceGA remains outside
-the core scope of `popmaps2`; the package focuses on using candidate surfaces to
-interpolate ancestry and compare predictive support.
+conductance-like inputs after they are exported to a supported raster or
+coordinate/value table. Running SDMs, EEMS/FEEMS, Circuitscape, or ResistanceGA
+remains outside the core scope of `popmaps2`; the package focuses on using
+candidate surfaces to interpolate ancestry and compare predictive support.
 
 `popmaps(surface = "C")`, `tune_popmaps(surface = "C")`, and
 `compare_popmaps_surfaces()` can use suitability, conductance, or resistance
@@ -150,6 +167,17 @@ decay summaries should be interpreted as surface-specific distance scales.
 The embedded `hija_struc` dataset is the reference format.
 
 The original POPMAPS implementation expected columns named `V1`, `V2`, `V3`, and so on. `popmaps2` now normalizes valid input tables internally, so descriptive column names such as `site`, `lon`, `lat`, `axis1`, `axis2`, and `axis3` are accepted as long as the column order is correct.
+
+Point features can be converted from `sf` when that optional package is
+installed:
+
+```r
+input_locs <- locs_from_sf(
+  sf_points,
+  site_col = "site",
+  ancestry_cols = c("axis1", "axis2", "axis3")
+)
+```
 
 ### 3. Optional Sample Points
 
@@ -399,6 +427,11 @@ A future release will wrap this list in an S3 class with helper methods for prin
 | `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
 | `plot_surface_comparison()` | Plot surface validation scores, relative support gaps, and selected best parameters. |
 | `write_surface_comparison_report()` | Write surface-comparison CSVs, diagnostic figures, and a Markdown report. |
+| `surface_from_points()` | Build a simple prediction surface from empirical coordinates. |
+| `locs_from_sf()` | Convert `sf` point features to a POPMAPS location table. |
+| `surfaces_from_raster_stack()` | Convert each raster layer to a candidate surface list. |
+| `surface_from_eems()` | Convert raster-like or coordinate/value EEMS exports to a conductance surface. |
+| `surface_from_feems()` | Convert raster-like or coordinate/value FEEMS exports to a conductance surface. |
 | `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
 | `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
 | `suggest_surface_tuning_grid()` | Suggest tuning grids from distances measured over a geographic or least-cost candidate surface. |

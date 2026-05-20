@@ -34,3 +34,4 @@
 - Replaced the full `popmaps(surface = "C")` least-cost interpolation engine with the internal distance helper, removing the `gdistance` requirement from the main ancestry-surface workflow while preserving the original suitability-as-conductance default.
 - Added shared resource configuration for local validation/reporting scripts, including cross-platform processor detection, conservative thread defaults for system libraries, terra memory settings, and run-summary reporting.
 - Added `tools/benchmark-aslo-local.R` for repeatable small-, medium-, and full-scale ASLO runtime and memory checks.
+- Added input converter helpers: `surface_from_points()`, `locs_from_sf()`, `surfaces_from_raster_stack()`, `surface_from_eems()`, and `surface_from_feems()`.
