@@ -15,6 +15,16 @@ test_that("surface_from_points builds a geographic prediction surface", {
   expect_gte(terra::ncell(surface$rast), 1)
 })
 
+test_that("surface_from_points defaults to geographic surfaces", {
+  coords <- data.frame(lon = c(0, 1), lat = c(0, 1))
+
+  surface <- surface_from_points(coords, resolution = 1, buffer = 0)
+
+  expect_equal(surface$surface, "G")
+  expect_true(is.na(surface$surface_values))
+  expect_null(surface$conductance)
+})
+
 test_that("surface_from_points can build a constant conductance surface", {
   coords <- data.frame(x = c(0, 2), y = c(0, 2))
 

@@ -1,0 +1,194 @@
+---
+title: "Comparing POPMAPS interpolation surfaces"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparing POPMAPS interpolation surfaces}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette shows the intended surface-comparison workflow in `popmaps2`.
+The goal is not to fit species distribution models, EEMS, FEEMS, or resistance
+models inside `popmaps2`. The goal is to take candidate surfaces from those
+outside analyses, use them for ancestry interpolation, and ask which surface
+best predicts withheld empirical ancestry estimates.
+
+## Terminology
+
+`surface = "G"` means geographic interpolation. Raster values are ignored for
+distance calculations. The raster only defines the prediction grid, extent, cell
+size, and optional missing cells.
+
+`surface = "C"` means conductance or cost-distance interpolation. Raster values
+matter because they define how easily ancestry information moves across the
+landscape. Higher suitability or conductance values imply easier movement. If a
+user supplies resistance values, `popmaps2` converts them to conductance with an
+inverse transform.
+
+`surface_from_points()` is mostly a convenience for `G`: it creates a simple
+grid around empirical sampling coordinates when the user does not already have a
+raster. It can create a constant `C` surface, but that is a neutral template,
+not a biological landscape hypothesis.
+
+## Starting From Empirical Locations
+
+POPMAPS location tables have site name, longitude, latitude, and ancestry
+coefficients:
+
+```{r}
+library(popmaps2)
+
+data(hija_struc)
+head(hija_struc)
+```
+
+If locations are stored as `sf` point features, convert them first:
+
+```{r}
+input_locs <- locs_from_sf(
+  sf_points,
+  site_col = "site",
+  ancestry_cols = c("axis1", "axis2", "axis3")
+)
+```
+
+If no raster is available, create a geographic prediction grid from the
+coordinates:
+
+```{r}
+geographic_surface <- surface_from_points(
+  points = hija_struc,
+  resolution = 0.01,
+  surface = "G"
+)
+```
+
+For a real analysis, choose `resolution` in the coordinate units of the data.
+If coordinates are longitude and latitude, that means decimal degrees. If the
+data are projected, it may mean meters.
+
+## Preparing Candidate Surfaces
+
+An SDM logistic suitability raster can be treated as conductance:
+
+```{r}
+sdm_surface <- prepare_popmaps_surface(
+  input_raster = sdm_raster,
+  surface = "C",
+  surface_values = "suitability"
+)
+```
+
+A resistance raster can be supplied directly and inverted internally:
+
+```{r}
+resistance_surface <- prepare_popmaps_surface(
+  input_raster = resistance_raster,
+  surface = "C",
+  surface_values = "resistance"
+)
+```
+
+If a multi-layer raster contains several candidate surfaces, convert every layer
+into a named list:
+
+```{r}
+candidate_surfaces <- surfaces_from_raster_stack(
+  input_raster = multi_layer_raster,
+  surface = "C",
+  surface_values = c("suitability", "conductance", "resistance"),
+  include_geographic = TRUE
+)
+```
+
+EEMS and FEEMS outputs should be generated outside `popmaps2`, then imported as
+raster-like outputs or coordinate/value tables:
+
+```{r}
+eems_surface <- surface_from_eems(
+  input = eems_table,
+  value_col = "migration",
+  surface_values = "conductance"
+)
+
+feems_surface <- surface_from_feems(
+  input = feems_table,
+  value_col = "w",
+  surface_values = "conductance"
+)
+```
+
+## Comparing Surfaces
+
+Surface comparison uses the same validation design across each candidate
+surface. With `surface_grid = "surface_specific"`, missing tuning values are
+suggested separately for each surface so geographic kilometers and least-cost
+distance units are not forced onto the same scale.
+
+```{r}
+surfaces <- list(
+  geographic = geographic_surface,
+  sdm_suitability = sdm_surface,
+  resistance = resistance_surface
+)
+
+comparison <- compare_popmaps_surfaces(
+  input_locs = input_locs,
+  surfaces = surfaces,
+  validation = "spatial_block",
+  n_blocks = 4,
+  spatial_block_repeats = 5,
+  spatial_block_seed = 1
+)
+
+comparison$summary
+comparison$support
+```
+
+Lower RMSE, MAE, and Hellinger distance are better. Higher dominant ancestry
+accuracy and dominant ancestry probability are better. The default support rule
+labels a surface as clearly supported only when no other surface is within the
+near-best tolerance.
+
+## Reporting
+
+Use the report helper to create CSVs, plots, and a short Markdown report:
+
+```{r}
+report <- write_surface_comparison_report(
+  comparison,
+  dir = "surface-comparison-report",
+  prefix = "hija-surfaces"
+)
+
+report$report
+report$figures
+```
+
+The report is meant to support interpretation, not automate judgment. A surface
+that is "indistinguishable" from another candidate should usually be treated as
+equally supported by the current data and validation design.
+
+## Practical Guidance
+
+Start with a small candidate set:
+
+- a geographic `G` surface;
+- one SDM or habitat suitability `C` surface;
+- one resistance or conductance surface if the species has a defensible
+  landscape hypothesis;
+- EEMS or FEEMS exports only when those analyses have already been run and
+  interpreted upstream.
+
+Prefer spatial-block validation when the management question involves
+prediction into unsampled areas. Leave-one-out validation is useful for checking
+local interpolation behavior, but it can be optimistic when nearby empirical
+sites are very similar.

@@ -35,3 +35,4 @@
 - Added shared resource configuration for local validation/reporting scripts, including cross-platform processor detection, conservative thread defaults for system libraries, terra memory settings, and run-summary reporting.
 - Added `tools/benchmark-aslo-local.R` for repeatable small-, medium-, and full-scale ASLO runtime and memory checks.
 - Added input converter helpers: `surface_from_points()`, `locs_from_sf()`, `surfaces_from_raster_stack()`, `surface_from_eems()`, and `surface_from_feems()`.
+- Added a surface-comparison vignette and a bundled-data example script that uses `surface_from_points()` plus `write_surface_comparison_report()`.

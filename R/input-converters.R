@@ -2,10 +2,12 @@
 #'
 #' @description
 #' `surface_from_points()` builds a simple prediction grid around sampling
-#' coordinates, then returns a [prepare_popmaps_surface()] object. This is useful
-#' when users have empirical ancestry locations but have not supplied a raster
-#' yet. The resulting surface is usually geographic (`surface = "G"`), although
-#' a constant conductance surface can also be created with `surface = "C"`.
+#' coordinates, then returns a [prepare_popmaps_surface()] object. This helper is
+#' primarily for geographic interpolation (`surface = "G"`) or template
+#' creation when users have empirical ancestry locations but have not supplied a
+#' raster yet. A constant conductance surface can also be created with
+#' `surface = "C"`, but that is a neutral grid rather than a biologically
+#' informed landscape surface.
 #'
 #' @param points A data frame, matrix, `sf` object, or `terra::SpatVector`
 #'   containing point coordinates. Data frames may be raw `x`/`y` coordinates or
@@ -41,11 +43,11 @@ surface_from_points <- function(points,
                                 target_cells = 100,
                                 crs = "",
                                 values = 1,
-                                surface = c("G", "C"),
+                                surface = "G",
                                 surface_values = c("suitability", "conductance", "resistance"),
                                 rescale_conductance = FALSE,
                                 resistance_epsilon = sqrt(.Machine$double.eps)) {
-  surface <- match.arg(surface)
+  surface <- match.arg(surface, c("G", "C"))
   surface_values <- if (surface == "C") match.arg(surface_values) else "suitability"
   coords <- popmaps_coordinates_from_input(points, coordinate_cols = coordinate_cols, crs = crs)
   template <- popmaps_template_from_coords(
