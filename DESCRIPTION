@@ -51,6 +51,7 @@ Suggests:
     gplots,
     knitr,
     rmarkdown,
+    sf,
     testthat (>= 3.0.0),
     viridis
 Config/testthat/edition: 3
