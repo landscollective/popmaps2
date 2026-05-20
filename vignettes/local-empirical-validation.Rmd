@@ -1,0 +1,114 @@
+---
+title: "Local empirical validation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Local empirical validation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette describes how to run larger empirical checks without committing
+private or bulky rasters to the package repository. The package includes bundled
+`hija_*` example data for tests and documentation. Larger species examples, such
+as ASLO, should live outside the package and be passed to the scripts in
+`tools/`.
+
+The local scripts are intentionally plain R scripts rather than package tests.
+That keeps GitHub Actions fast while still giving maintainers a reproducible way
+to validate realistic data on a local machine.
+
+## ASLO-Style Single Run
+
+`tools/validate-aslo-local.R` runs one POPMAPS interpolation from an ASCII raster
+and an ancestry table.
+
+```bash
+Rscript tools/validate-aslo-local.R \
+  "/path/to/aslo_avg.asc" \
+  "/path/to/aslo.txt" \
+  "local_validation/aslo"
+```
+
+Useful environment variables:
+
+```bash
+POPMAPS_ASLO_SURFACE=C \
+POPMAPS_ASLO_SURFACE_VALUES=suitability \
+POPMAPS_ASLO_NUM_SITES=15 \
+POPMAPS_ASLO_NUM_TESTED=4 \
+POPMAPS_ASLO_POPMOD=-0.05 \
+Rscript tools/validate-aslo-local.R \
+  "/path/to/aslo_avg.asc" \
+  "/path/to/aslo.txt" \
+  "local_validation/aslo"
+```
+
+The output directory contains run metadata, output summaries, and any exported
+rasters requested by the script. Keep these outputs out of package source unless
+they are intentionally small, public, and documented.
+
+## Example Species Surface Comparisons
+
+`tools/compare-example-surfaces.R` scans a directory of empirical examples and
+compares a point-derived geographic surface against a supplied suitability
+surface for each species.
+
+```bash
+Rscript tools/compare-example-surfaces.R \
+  "../popmaps_test_data" \
+  "local_validation/example_surface_comparison"
+```
+
+Each completed comparison writes:
+
+- a ranked surface summary;
+- a support table;
+- the tuning grid used for each surface;
+- diagnostic PNGs;
+- optional full tuning-result CSVs.
+
+These artifacts are the best place to ask whether surface comparison is telling
+us something biologically useful or simply returning the same parameter region
+for every species.
+
+## Example Species Tuning
+
+`tools/validate-example-tuning.R` runs repeated spatial-block tuning across
+external empirical examples.
+
+```bash
+Rscript tools/validate-example-tuning.R \
+  "../popmaps_test_data" \
+  "local_validation/example_tuning"
+```
+
+After the tuning runs finish, summarize them:
+
+```bash
+Rscript tools/summarize-example-tuning.R \
+  "local_validation/example_tuning"
+```
+
+The summary is intended to answer practical questions:
+
+- which parameter combinations are best supported;
+- whether support is sharp or broad;
+- whether results are sensitive to spatial-block repeats;
+- whether species with different biology select different distance-decay or
+  empirical-site parameters.
+
+## Interpreting Results
+
+Treat local empirical validation as evidence, not automation. Parameter tuning
+is useful when it changes conclusions, exposes broad uncertainty, or shows that
+different species or surfaces require different distance assumptions. If every
+species repeatedly supports the same parameter values, that suggests either a
+shared biological signal, an overly narrow tuning grid, or a validation design
+that is not sensitive to the biology of interest.

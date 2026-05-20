@@ -45,8 +45,9 @@
 #' @param primary_metric Metric used to select the best parameter combination.
 #' @param dist_prob_func Function defining the relationship between distance and
 #'   empirical-site contribution.
-#' @param rescale_conductance Logical. If `TRUE`, rescale conductance values to
-#'   0-1 before least-cost distances are calculated for `surface = "C"`.
+#' @param rescale_conductance Logical. If `TRUE`, scale conductance values by
+#'   the largest non-missing conductance value before least-cost distances are
+#'   calculated for `surface = "C"`.
 #' @param resistance_epsilon Positive numeric scalar added to resistance values
 #'   before inversion when `surface_values = "resistance"`.
 #' @param quiet Logical. If `FALSE`, print a short completion message.
@@ -742,8 +743,8 @@ diagnose_tuning <- function(tuning,
   )
 
   tuning_parameters <- intersect(
-    c("num_sites", "num_tested", "popmod", "half_distance_km",
-      "ten_pct_distance_km", "empirical_pt_dist"),
+    c("num_sites", "num_tested", "popmod", "half_distance",
+      "ten_pct_distance", "empirical_pt_dist"),
     names(results)
   )
 
@@ -1732,6 +1733,8 @@ popmaps_tuning_fold_row <- function(combo,
       num_sites = combo$num_sites,
       num_tested = combo$num_tested,
       popmod = combo$popmod,
+      half_distance = popmaps_decay_distance(combo$popmod, 0.5),
+      ten_pct_distance = popmaps_decay_distance(combo$popmod, 0.1),
       half_distance_km = popmaps_decay_distance(combo$popmod, 0.5),
       ten_pct_distance_km = popmaps_decay_distance(combo$popmod, 0.1),
       distance_units = distance_units,
@@ -1800,6 +1803,8 @@ popmaps_summarize_tuning_results <- function(folds) {
       num_sites = first$num_sites,
       num_tested = first$num_tested,
       popmod = first$popmod,
+      half_distance = first$half_distance,
+      ten_pct_distance = first$ten_pct_distance,
       half_distance_km = first$half_distance_km,
       ten_pct_distance_km = first$ten_pct_distance_km,
       distance_units = first$distance_units,

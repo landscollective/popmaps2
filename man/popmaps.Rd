@@ -19,7 +19,8 @@ popmaps(
  },
   surface_values = c("suitability", "conductance", "resistance"),
   rescale_conductance = FALSE,
-  resistance_epsilon = sqrt(.Machine$double.eps)
+  resistance_epsilon = sqrt(.Machine$double.eps),
+  legacy_compat = FALSE
 )
 }
 \arguments{
@@ -78,11 +79,16 @@ an inference cell. The default equation defines the relationship in Fig. 2 of Ma
 \code{"suitability"} and \code{"conductance"} use values directly; \code{"resistance"}
 converts values to conductance using an inverse transform.}
 
-\item{rescale_conductance}{Logical. If \code{TRUE}, rescale non-missing
-conductance values to the range 0-1 after any resistance conversion.}
+\item{rescale_conductance}{Logical. If \code{TRUE}, divide conductance by the
+largest non-missing conductance value after any resistance conversion.}
 
 \item{resistance_epsilon}{Positive numeric scalar added to resistance values
 before inversion when \code{surface_values = "resistance"}.}
+
+\item{legacy_compat}{Logical. If \code{TRUE}, reproduce POPMAPS 1.03 spatial
+indexing behavior for validation and historical comparisons. The default
+\code{FALSE} uses actual raster cell centers and selects \code{surface = "C"}
+candidate sites by least-cost distance.}
 }
 \description{
 This function estimates an ancestry probability surface when supplied

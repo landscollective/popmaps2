@@ -25,10 +25,11 @@
 #' @param barrier Optional raster with the same geometry as `input_raster`.
 #'   Non-zero, non-`NA` cells mark cells that should be treated as
 #'   non-traversable in modern least-cost workflows.
-#' @param rescale_conductance Logical. If `TRUE`, rescale non-missing
-#'   conductance values to the range 0-1 after any resistance conversion. The
-#'   default is `FALSE` to preserve legacy POPMAPS behavior for MaxEnt logistic
-#'   suitability rasters.
+#' @param rescale_conductance Logical. If `TRUE`, divide conductance by the
+#'   largest non-missing conductance value after any resistance conversion. This
+#'   preserves zero-valued barriers while putting the maximum conductance on a
+#'   0-1 scale. The default is `FALSE` to preserve legacy POPMAPS behavior for
+#'   MaxEnt logistic suitability rasters.
 #' @param resistance_epsilon Positive numeric scalar added to resistance values
 #'   before inversion to avoid infinite conductance when resistance is zero.
 #'
@@ -167,7 +168,7 @@ popmaps_prepare_conductance <- function(rast,
 
   if (isTRUE(rescale_conductance)) {
     conductance <- popmaps_rescale_conductance(conductance)
-    transform <- paste(transform, "rescaled_0_1", sep = "+")
+    transform <- paste(transform, "scaled_by_max", sep = "+")
   }
 
   names(conductance) <- "conductance"
@@ -188,15 +189,9 @@ popmaps_assert_positive_conductance <- function(conductance) {
 popmaps_rescale_conductance <- function(conductance) {
   conductance_values <- terra::values(conductance, mat = FALSE)
   observed <- !is.na(conductance_values)
-  conductance_min <- min(conductance_values[observed])
   conductance_max <- max(conductance_values[observed])
 
-  if (conductance_max == conductance_min) {
-    conductance_values[observed] <- 1
-  } else {
-    conductance_values[observed] <- (conductance_values[observed] - conductance_min) /
-      (conductance_max - conductance_min)
-  }
+  conductance_values[observed] <- conductance_values[observed] / conductance_max
 
   terra::values(conductance) <- conductance_values
   conductance

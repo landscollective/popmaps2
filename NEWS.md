@@ -38,3 +38,7 @@
 - Added a surface-comparison vignette and a bundled-data example script that uses `surface_from_points()` plus `write_surface_comparison_report()`.
 - Added a pkgdown scaffold, clearer vignette installation notes, and runnable examples for surface input converter help pages.
 - Added a manual pkgdown deployment workflow, reduced routine R-CMD-check triggers to pull requests/manual runs, cleaned the README, and annotated local validation scripts.
+- Corrected default `popmaps()` raster-cell coordinates to use true raster cell centers, with `legacy_compat = TRUE` retained for POPMAPS 1.03 reproducibility.
+- Updated default `surface = "C"` interpolation to select candidate empirical sites by least-cost distance, while legacy geographic prefiltering remains available only through `legacy_compat = TRUE`.
+- Added unit-neutral `half_distance` and `ten_pct_distance` tuning summaries while retaining the older `_km` columns for compatibility.
+- Changed optional conductance rescaling to divide by maximum conductance so zero-valued barriers remain zero instead of turning the minimum positive conductance into a barrier.

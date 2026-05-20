@@ -47,10 +47,14 @@
 #'     num_tested sites to estimate ancestry coefficients. If empirical sites are highly clustered 
 #'     and rarefaction due to empirical_pt_dist causes many to be discarded, this variable will likely 
 #'     need to be increased at the cost of computing time.
-#' @param rescale_conductance Logical. If `TRUE`, rescale non-missing
-#'     conductance values to the range 0-1 after any resistance conversion.
+#' @param rescale_conductance Logical. If `TRUE`, divide conductance by the
+#'     largest non-missing conductance value after any resistance conversion.
 #' @param resistance_epsilon Positive numeric scalar added to resistance values
 #'     before inversion when `surface_values = "resistance"`.
+#' @param legacy_compat Logical. If `TRUE`, reproduce POPMAPS 1.03 spatial
+#'     indexing behavior for validation and historical comparisons. The default
+#'     `FALSE` uses actual raster cell centers and selects `surface = "C"`
+#'     candidate sites by least-cost distance.
 #' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
@@ -74,11 +78,15 @@ popmaps <- function(input_raster='',
                     dist_prob_func=function(popmod_temp,distance) {exp(popmod_temp*distance)},
                     surface_values = c("suitability", "conductance", "resistance"),
                     rescale_conductance = FALSE,
-                    resistance_epsilon = sqrt(.Machine$double.eps)) {
+                    resistance_epsilon = sqrt(.Machine$double.eps),
+                    legacy_compat = FALSE) {
 
   surface_values <- match.arg(surface_values)
   if (!is.logical(rescale_conductance) || length(rescale_conductance) != 1 || is.na(rescale_conductance)) {
     stop("`rescale_conductance` must be `TRUE` or `FALSE`.", call. = FALSE)
+  }
+  if (!is.logical(legacy_compat) || length(legacy_compat) != 1 || is.na(legacy_compat)) {
+    stop("`legacy_compat` must be `TRUE` or `FALSE`.", call. = FALSE)
   }
 
   prepared <- popmaps_prepare_inputs(
@@ -110,7 +118,8 @@ popmaps <- function(input_raster='',
       num_tested = num_tested,
       popmod = popmod,
       threshold = threshold,
-      dist_prob_func = dist_prob_func
+      dist_prob_func = dist_prob_func,
+      legacy_compat = legacy_compat
     ))
   }
 
@@ -125,6 +134,7 @@ popmaps <- function(input_raster='',
     dist_prob_func = dist_prob_func,
     surface_values = surface_values,
     rescale_conductance = rescale_conductance,
-    resistance_epsilon = resistance_epsilon
+    resistance_epsilon = resistance_epsilon,
+    legacy_compat = legacy_compat
   )
 } #function end bracket

@@ -21,7 +21,9 @@ pass/fail status. The overall result is stored in the \code{passed} attribute.
 Runs a small Hilaria jamesii ancestry probability surface and
 compares the result to a frozen POPMAPS 1.03 reference output bundled with
 the package. This is intended as a quick scientific regression check before
-deeper optimization work changes the modeling internals.
+deeper optimization work changes the modeling internals. The check runs
+\code{\link[=popmaps]{popmaps()}} with \code{legacy_compat = TRUE} because POPMAPS 1.03 included a
+raster-cell indexing artifact that is preserved only for reproducibility.
 }
 \examples{
 validate_popmaps_baseline()

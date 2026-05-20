@@ -194,7 +194,9 @@ plot_near_best <- function(summary, path) {
 
 # Plot interpretable distance-decay scales for the best parameter combination.
 plot_decay <- function(summary, path) {
-  decay <- summary[is.finite(summary$half_distance_km) & is.finite(summary$ten_pct_distance_km), , drop = FALSE]
+  half_col <- if ("half_distance" %in% names(summary)) "half_distance" else "half_distance_km"
+  ten_col <- if ("ten_pct_distance" %in% names(summary)) "ten_pct_distance" else "ten_pct_distance_km"
+  decay <- summary[is.finite(summary[[half_col]]) & is.finite(summary[[ten_col]]), , drop = FALSE]
   species <- ordered_species(decay)
   validations <- unique(decay$validation)
   colors <- validation_colors(validations)
@@ -206,11 +208,11 @@ plot_decay <- function(summary, path) {
   graphics::plot(
     NA,
     xlim = c(0.5, length(species) + 0.5),
-    ylim = range(c(decay$half_distance_km, decay$ten_pct_distance_km), finite = TRUE),
+    ylim = range(c(decay[[half_col]], decay[[ten_col]]), finite = TRUE),
     log = "y",
     xaxt = "n",
     xlab = "",
-    ylab = "Distance decay scale (km, log scale)",
+    ylab = "Distance decay scale (log scale)",
     main = "Best distance-decay scales"
   )
   graphics::axis(1, at = seq_along(species), labels = species, las = 2)
@@ -218,9 +220,9 @@ plot_decay <- function(summary, path) {
     validation <- validations[idx]
     rows <- decay[decay$validation == validation, , drop = FALSE]
     x <- match(rows$species, species) + offsets[idx]
-    graphics::segments(x, rows$half_distance_km, x, rows$ten_pct_distance_km, col = colors[[validation]], lwd = 2)
-    graphics::points(x, rows$half_distance_km, pch = 19, col = colors[[validation]], cex = 1.2)
-    graphics::points(x, rows$ten_pct_distance_km, pch = 17, col = colors[[validation]], cex = 1.2)
+    graphics::segments(x, rows[[half_col]], x, rows[[ten_col]], col = colors[[validation]], lwd = 2)
+    graphics::points(x, rows[[half_col]], pch = 19, col = colors[[validation]], cex = 1.2)
+    graphics::points(x, rows[[ten_col]], pch = 17, col = colors[[validation]], cex = 1.2)
   }
   graphics::legend(
     "topleft",
@@ -389,7 +391,8 @@ summary_columns <- intersect(
   c("species", "validation", "n_validation_repeats", "best_score",
     "best_score_repeat_sd", "near_best_fraction", "support",
     "tuning_signal", "num_sites", "num_tested", "popmod",
-    "half_distance_km", "ten_pct_distance_km", "empirical_pt_dist"),
+    "half_distance", "ten_pct_distance", "half_distance_km",
+    "ten_pct_distance_km", "empirical_pt_dist"),
   names(summary)
 )
 report_path <- file.path(report_dir, "empirical-tuning-report.md")

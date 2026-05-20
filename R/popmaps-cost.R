@@ -8,24 +8,16 @@ popmaps_cost_surface <- function(raster_surface,
                                  dist_prob_func,
                                  surface_values,
                                  rescale_conductance,
-                                 resistance_epsilon) {
+                                 resistance_epsilon,
+                                 legacy_compat = FALSE) {
   nrows <- raster_surface@nrows
   ncols <- raster_surface@ncols
-  ymax <- raster_surface@extent@ymax
-  xmin <- raster_surface@extent@xmin
-  cell_size <- raster::res(raster_surface)[1]
 
   num_axes <- ncol(species_data) - 3
   ancestry <- as.matrix(species_data[, seq.int(4, ncol(species_data)), drop = FALSE])
   sampling_loc_coords <- as.matrix(species_data[, 2:3, drop = FALSE])
 
-  coords <- popmaps_legacy_cell_coords(
-    nrows = nrows,
-    ncols = ncols,
-    xmin = xmin,
-    ymax = ymax,
-    cell_size = cell_size
-  )
+  coords <- popmaps_cell_coords(raster_surface, legacy_compat = legacy_compat)
   raster_values <- raster::extract(raster_surface, coords)
   geographic_cell_distances <- popmaps_cell_site_distances(coords, sampling_loc_coords)
 
@@ -86,9 +78,17 @@ popmaps_cost_surface <- function(raster_surface,
       next
     }
 
-    geographic_order <- order(geographic_cell_distances[cell_idx, ])[seq_len(num_sites)]
-    cost_values <- cost_cell_distances[cell_idx, geographic_order]
-    cell_order <- geographic_order[order(cost_values, na.last = TRUE)]
+    if (isTRUE(legacy_compat)) {
+      geographic_order <- order(geographic_cell_distances[cell_idx, ])[seq_len(num_sites)]
+      cost_values <- cost_cell_distances[cell_idx, geographic_order]
+      cell_order <- geographic_order[order(cost_values, na.last = TRUE)]
+    } else {
+      reachable_sites <- which(is.finite(cost_cell_distances[cell_idx, ]))
+      if (length(reachable_sites) < num_sites) {
+        next
+      }
+      cell_order <- reachable_sites[order(cost_cell_distances[cell_idx, reachable_sites])][seq_len(num_sites)]
+    }
     nearest_site <- cell_order[1]
     result[cell_idx, 1] <- hard_boundaries[nearest_site]
 

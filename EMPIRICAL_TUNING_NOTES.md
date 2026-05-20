@@ -22,7 +22,7 @@ species have much more block-layout sensitivity than others.
 
 ## Repeated Spatial-Block Summary
 
-| species | best RMSE | RMSE repeat SD | near-best fraction | support | signal | best num_sites | best num_tested | half-distance km | 10%-distance km | empirical point distance km |
+| species | best RMSE | RMSE repeat SD | near-best fraction | support | signal | best num_sites | best num_tested | half-distance | 10%-distance | empirical point distance |
 | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | ASLO | 0.1874 | 0.0356 | 0.1087 | moderate | moderate | 5 | 2 | 55.6 | 184.7 | 0.0 |
 | CLLU | 0.2487 | 0.0354 | 0.0702 | sharp | moderate | 5 | 2 | 53.1 | 176.4 | 0.0 |
@@ -63,4 +63,3 @@ Rscript tools/validate-example-tuning.R \
 Rscript tools/summarize-example-tuning.R \
   ../popmaps_test_data/tuning_outputs
 ```
-

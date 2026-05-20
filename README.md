@@ -36,6 +36,8 @@ Evolution*, 13, 2668-2681. <https://doi.org/10.1111/2041-210X.13902>
 - faster geographic interpolation for `surface = "G"`;
 - internal least-cost distances for `surface = "C"`, replacing the main
   dependency on `gdistance`;
+- raster-cell-center interpolation by default, with explicit POPMAPS 1.03
+  compatibility mode for historical validation;
 - suitability, conductance, and resistance inputs for `surface = "C"`;
 - tuning with leave-one-out and spatial-block validation;
 - repeated spatial-block validation for uncertainty in validation design;
@@ -119,6 +121,12 @@ For `surface = "C"`, declare the meaning of raster values with
 
 `threshold` is a prediction mask. It skips cells where ancestry should not be
 estimated, but it is not treated as a movement barrier.
+
+By default, `popmaps()` estimates every output cell at the actual raster cell
+center returned by the raster geometry. Set `legacy_compat = TRUE` only when you
+need to reproduce POPMAPS 1.03 output exactly for historical comparison. That
+legacy mode preserves an old raster-indexing workaround and should not be used
+for new analyses.
 
 ### Empirical Ancestry Locations
 
@@ -304,6 +312,11 @@ aps <- popmaps(
 )
 ```
 
+For `surface = "C"`, `popmaps2` selects candidate empirical sites by least-cost
+distance over the supplied surface. In `legacy_compat = TRUE` mode only, it
+reproduces the POPMAPS 1.03 shortcut that first narrowed the candidate pool by
+geographic distance before ordering candidates by least-cost distance.
+
 Convert output to a raster and write GeoTIFFs:
 
 ```r
@@ -333,6 +346,11 @@ validate_popmaps_baseline()
 | `[[1]]` | Hard population boundary matrix |
 | `[[2]]` | Ancestry probability matrix |
 | `[[3]]...[[n]]` | Estimated ancestry coefficient matrices for each ancestry axis |
+
+The ancestry-axis matrices are weighted ancestry estimates following the
+published POPMAPS equation. They are not forced to sum to one at every cell
+because the distance-decay weights also carry information about confidence and
+distance from empirical data.
 
 Use `popmaps_rast()` and `write_popmaps()` for raster conversion and export.
 
@@ -428,17 +446,20 @@ Set `POPMAPS_BENCH_AGGREGATES=16,4,1` and
 
 ## Documentation
 
-The surface-comparison vignette is available after installing with
-`build_vignettes = TRUE`:
+Workflow vignettes are available after installing with `build_vignettes = TRUE`:
 
 ```r
+vignette("parameter-tuning", package = "popmaps2")
 vignette("surface-comparison", package = "popmaps2")
+vignette("local-empirical-validation", package = "popmaps2")
 ```
 
-In a repository checkout, the source file is:
+In a repository checkout, the source files are:
 
 ```text
+vignettes/parameter-tuning.Rmd
 vignettes/surface-comparison.Rmd
+vignettes/local-empirical-validation.Rmd
 ```
 
 The repository includes `pkgdown` configuration. To build the website locally:

@@ -1,0 +1,145 @@
+---
+title: "Tuning POPMAPS parameters"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tuning POPMAPS parameters}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+This vignette shows the recommended `popmaps2` parameter-tuning workflow. The
+goal is not to find universal defaults. The goal is to test whether a parameter
+combination predicts withheld empirical ancestry estimates well for the species,
+sampling design, and interpolation surface at hand.
+
+Lower RMSE, MAE, and Hellinger distance are better. Higher dominant ancestry
+accuracy and dominant ancestry probability are better.
+
+## Setup
+
+```{r setup}
+library(popmaps2)
+
+data(hija_raster)
+data(hija_struc)
+
+ex_raster <- raster::aggregate(hija_raster, fact = 240)
+```
+
+## Suggest A Starting Grid
+
+`suggest_tuning_grid()` uses empirical sampling-site distances to suggest a
+transparent starting grid for geographic-distance interpolation. The suggested
+`popmod` values are calculated from interpretable retained weights at a reference
+distance.
+
+```{r suggest-grid}
+grid <- suggest_tuning_grid(hija_struc)
+grid
+```
+
+These values should be treated as a starting point. They are useful because they
+scale to the empirical sampling design instead of relying on one fixed parameter
+set for every species.
+
+## Leave-One-Site-Out Tuning
+
+Leave-one-site-out validation withholds each empirical site, predicts its
+ancestry coefficients from the remaining sites, and scores the prediction.
+
+```{r loo-tuning}
+tuning <- tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  surface = "G",
+  empirical_pt_dist = grid$empirical_pt_dist,
+  num_sites = grid$num_sites,
+  num_tested = grid$num_tested,
+  popmod = grid$popmod,
+  quiet = TRUE
+)
+
+tuning$best
+```
+
+The `distance_units` column records whether distance summaries are geographic
+kilometers (`surface = "G"`) or least-cost distance units (`surface = "C"`).
+The unit-neutral columns `half_distance` and `ten_pct_distance` describe the
+distance at which the distance-decay weight is 0.5 and 0.1.
+
+## Diagnose Support
+
+`diagnose_tuning()` helps distinguish strong support from a broad set of
+near-best alternatives. This matters because a management surface should not
+look more certain than the empirical data support.
+
+```{r diagnose}
+diagnostics <- diagnose_tuning(tuning)
+
+diagnostics$overview
+diagnostics$parameter_ranges
+```
+
+If many combinations are near-best, report that uncertainty instead of choosing
+a single row visually.
+
+## Spatial-Block Validation
+
+Spatial-block validation is stricter than leave-one-site-out validation because
+it asks whether parameters predict into spatially grouped withheld sites.
+
+```{r spatial-block}
+spatial_tuning <- tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  surface = "G",
+  validation = "spatial_block",
+  n_blocks = 4,
+  spatial_block_repeats = 3,
+  spatial_block_seed = 1,
+  empirical_pt_dist = grid$empirical_pt_dist,
+  num_sites = grid$num_sites,
+  num_tested = grid$num_tested,
+  popmod = grid$popmod,
+  quiet = TRUE
+)
+
+spatial_tuning$best
+```
+
+Repeated spatial blocks are especially useful when sampling locations are
+clustered, because they expose whether the selected parameters depend strongly
+on one spatial partition.
+
+## Adaptive Exploration
+
+`adaptive_tune_popmaps()` samples parameter space with random or Latin-hypercube
+sampling, then optionally refines around the best-performing region. It is a
+practical alternative when the full parameter grid would be too large.
+
+```{r adaptive}
+adaptive <- adaptive_tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  n_initial = 8,
+  n_refine = 4,
+  seed = 1,
+  quiet = TRUE
+)
+
+adaptive$best
+```
+
+Adaptive tuning should still be interpreted with diagnostics. A sampled search
+can miss narrow optima, so use it as a way to explore parameter space before
+committing to a more focused validation run.

@@ -85,8 +85,9 @@ repeats use random spatial rotations.}
 \item{dist_prob_func}{Function defining the relationship between distance and
 empirical-site contribution.}
 
-\item{rescale_conductance}{Logical. If \code{TRUE}, rescale conductance values to
-0-1 before least-cost distances are calculated for \code{surface = "C"}.}
+\item{rescale_conductance}{Logical. If \code{TRUE}, scale conductance values by
+the largest non-missing conductance value before least-cost distances are
+calculated for \code{surface = "C"}.}
 
 \item{resistance_epsilon}{Positive numeric scalar added to resistance values
 before inversion when \code{surface_values = "resistance"}.}

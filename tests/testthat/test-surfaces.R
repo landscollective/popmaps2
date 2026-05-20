@@ -49,7 +49,7 @@ test_that("resistance surfaces are converted to conductance", {
 
 test_that("conductance rescaling is explicit", {
   surface_rast <- terra::rast(nrows = 2, ncols = 2, xmin = 0, xmax = 2, ymin = 0, ymax = 2)
-  terra::values(surface_rast) <- c(2, 4, 6, NA)
+  terra::values(surface_rast) <- c(0, 2, 6, NA)
 
   prepared <- prepare_popmaps_surface(
     surface_rast,
@@ -58,10 +58,10 @@ test_that("conductance rescaling is explicit", {
     rescale_conductance = TRUE
   )
 
-  expect_equal(prepared$transform, "identity+rescaled_0_1")
+  expect_equal(prepared$transform, "identity+scaled_by_max")
   expect_equal(
     terra::values(prepared$conductance, mat = FALSE),
-    c(0, 0.5, 1, NA)
+    c(0, 2 / 6, 1, NA)
   )
 })
 
