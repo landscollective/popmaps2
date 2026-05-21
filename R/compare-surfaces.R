@@ -22,6 +22,10 @@
 #' @param near_best_tolerance Non-negative relative tolerance for labeling
 #'   surfaces as statistically near-best. The default keeps surfaces within 5%
 #'   of the best primary metric score.
+#' @param cache Logical. If `TRUE`, reuse in-memory geographic and least-cost
+#'   distance objects while resolving tuning grids and evaluating candidate
+#'   surfaces. This is useful when several surfaces or validation designs reuse
+#'   the same empirical coordinates.
 #' @inheritParams tune_popmaps
 #'
 #' @return A `popmaps_surface_comparison` object with:
@@ -32,6 +36,7 @@
 #'   \item{support}{One-row conservative interpretation of surface support.}
 #'   \item{tunings}{Named list of `popmaps_tuning` objects, one per surface.}
 #'   \item{grids}{Named list of surface-specific tuning grids used for the comparison.}
+#'   \item{cache}{Summary of in-memory distance-cache use during the comparison.}
 #' }
 #'
 #' @examples
@@ -84,6 +89,7 @@ compare_popmaps_surfaces <- function(input_locs,
                                      },
                                      surface_grid = c("surface_specific", "shared"),
                                      near_best_tolerance = 0.05,
+                                     cache = TRUE,
                                      quiet = TRUE) {
   validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
@@ -95,8 +101,10 @@ compare_popmaps_surfaces <- function(input_locs,
   if (near_best_tolerance < 0) {
     stop("`near_best_tolerance` must be non-negative.", call. = FALSE)
   }
+  popmaps_check_logical_scalar(cache, "`cache`")
 
   surface_specs <- popmaps_normalize_surface_specs(surfaces)
+  distance_cache <- popmaps_new_distance_cache(enabled = cache)
   if (
     validation == "spatial_block" &&
       is.null(block_assignments) &&
@@ -119,16 +127,21 @@ compare_popmaps_surfaces <- function(input_locs,
       num_tested = num_tested,
       popmod = popmod,
       empirical_pt_dist = empirical_pt_dist,
-      surface_grid = surface_grid
+      surface_grid = surface_grid,
+      distance_cache = distance_cache,
+      surface_cache_key = surface_name
     )
-    tunings[[surface_name]] <- tune_popmaps(
-      input_raster = surface_object,
-      input_locs = input_locs,
-      surface = surface_object$surface,
-      empirical_pt_dist = grids[[surface_name]]$empirical_pt_dist,
+    parameter_grid <- popmaps_make_tuning_grid(
       num_sites = grids[[surface_name]]$num_sites,
       num_tested = grids[[surface_name]]$num_tested,
       popmod = grids[[surface_name]]$popmod,
+      empirical_pt_dist = grids[[surface_name]]$empirical_pt_dist
+    )
+    tunings[[surface_name]] <- popmaps_evaluate_tuning_grid(
+      input_raster = surface_object,
+      input_locs = input_locs,
+      surface = surface_object$surface,
+      parameter_grid = parameter_grid,
       threshold = threshold,
       validation = validation,
       n_blocks = n_blocks,
@@ -137,7 +150,13 @@ compare_popmaps_surfaces <- function(input_locs,
       spatial_block_seed = spatial_block_seed,
       primary_metric = primary_metric,
       dist_prob_func = dist_prob_func,
-      quiet = TRUE
+      surface_values = surface_object$surface_values,
+      rescale_conductance = surface_object$rescale_conductance,
+      resistance_epsilon = surface_object$resistance_epsilon,
+      quiet = TRUE,
+      call = match.call(),
+      distance_cache = distance_cache,
+      surface_cache_key = surface_name
     )
   }
 
@@ -171,6 +190,7 @@ compare_popmaps_surfaces <- function(input_locs,
     validation = validation,
     surface_grid = surface_grid,
     near_best_tolerance = near_best_tolerance,
+    cache = popmaps_distance_cache_summary(distance_cache),
     spatial_block_seed = spatial_block_seed,
     call = match.call()
   )
@@ -195,15 +215,17 @@ popmaps_resolve_comparison_grid <- function(input_locs,
                                             num_tested,
                                             popmod,
                                             empirical_pt_dist,
-                                            surface_grid) {
+                                            surface_grid,
+                                            distance_cache = NULL,
+                                            surface_cache_key = NULL) {
   suggested <- if (surface_grid == "surface_specific") {
-    suggest_surface_tuning_grid(
-      input_raster = surface_object,
+    popmaps_suggest_surface_tuning_grid_cached(
       input_locs = input_locs,
-      surface = surface_object$surface,
-      surface_values = surface_object$surface_values,
       num_sites = num_sites,
-      num_tested = num_tested
+      num_tested = num_tested,
+      surface_object = surface_object,
+      distance_cache = distance_cache,
+      surface_cache_key = surface_cache_key
     )
   } else {
     suggest_tuning_grid(
@@ -231,6 +253,64 @@ popmaps_resolve_comparison_grid <- function(input_locs,
   suggested
 }
 
+popmaps_suggest_surface_tuning_grid_cached <- function(input_locs,
+                                                       surface_object,
+                                                       num_sites,
+                                                       num_tested,
+                                                       distance_cache = NULL,
+                                                       surface_cache_key = NULL,
+                                                       empirical_pt_dist_probs = c(0.05, 0.10, 0.25),
+                                                       distance_weights = c(0.95, 0.75, 0.50, 0.25, 0.10, 0.05),
+                                                       distance_reference = "median",
+                                                       max_num_tested = 8) {
+  locations <- popmaps_prepare_locations(input_locs)
+  coords <- as.matrix(locations[, 2:3, drop = FALSE])
+  if (is.null(surface_cache_key)) {
+    surface_cache_key <- surface_object$surface
+  }
+
+  if (identical(surface_object$surface, "G")) {
+    distance_matrix <- popmaps_cached_empirical_site_distances(
+      coords = coords,
+      distance_cache = distance_cache,
+      cache_key = surface_cache_key
+    )
+    surface_values <- NA_character_
+    distance_units <- "km"
+  } else {
+    graph <- popmaps_cached_cost_graph(
+      surface = surface_object,
+      directions = 8,
+      distance_cache = distance_cache,
+      cache_key = surface_cache_key
+    )
+    distance_matrix <- popmaps_cached_cost_site_distances(
+      surface = surface_object,
+      coords = coords,
+      directions = 8,
+      graph = graph,
+      distance_cache = distance_cache,
+      cache_key = surface_cache_key
+    )
+    surface_values <- surface_object$surface_values
+    distance_units <- "cost_distance"
+  }
+
+  popmaps_suggest_tuning_grid_from_distances(
+    locations = locations,
+    distance_matrix = distance_matrix,
+    num_sites = num_sites,
+    num_tested = num_tested,
+    empirical_pt_dist_probs = empirical_pt_dist_probs,
+    distance_weights = distance_weights,
+    distance_reference = distance_reference,
+    max_num_tested = max_num_tested,
+    surface = surface_object$surface,
+    surface_values = surface_values,
+    distance_units = distance_units
+  )
+}
+
 #' @export
 print.popmaps_surface_comparison <- function(x, ...) {
   cat("POPMAPS surface comparison\n")
@@ -255,7 +335,9 @@ print.popmaps_surface_comparison <- function(x, ...) {
 #' @param type Plot type. `"score"` plots the primary validation metric by
 #'   surface. `"percent_from_best"` plots relative loss from the best surface.
 #'   `"best_parameters"` plots the best parameter values selected for each
-#'   surface.
+#'   surface. `"score_distribution"` shows whether each surface has a sharp or
+#'   broad tuning optimum. `"near_best_parameters"` plots full and near-best
+#'   parameter ranges for each surface.
 #' @param col Optional vector of plotting colors. Named vectors are matched to
 #'   surface names; unnamed vectors are recycled in comparison order.
 #' @param main Optional plot title.
@@ -265,7 +347,8 @@ print.popmaps_surface_comparison <- function(x, ...) {
 #'
 #' @export
 plot_surface_comparison <- function(comparison,
-                                    type = c("score", "percent_from_best", "best_parameters"),
+                                    type = c("score", "percent_from_best", "best_parameters",
+                                             "score_distribution", "near_best_parameters"),
                                     col = NULL,
                                     main = NULL,
                                     ...) {
@@ -280,8 +363,12 @@ plot_surface_comparison <- function(comparison,
     popmaps_plot_surface_scores(summary, comparison$primary_metric, colors, main, ...)
   } else if (type == "percent_from_best") {
     popmaps_plot_surface_percent_from_best(summary, colors, main, ...)
-  } else {
+  } else if (type == "best_parameters") {
     popmaps_plot_surface_best_parameters(summary, colors, main, ...)
+  } else if (type == "score_distribution") {
+    popmaps_plot_surface_score_distribution(comparison, colors, main, ...)
+  } else {
+    popmaps_plot_surface_near_best_parameters(comparison, colors, main, ...)
   }
 
   invisible(comparison)
@@ -334,12 +421,16 @@ write_surface_comparison_report <- function(comparison,
   table_paths <- c(
     summary = file.path(dir, paste0(prefix, "-summary.csv")),
     support = file.path(dir, paste0(prefix, "-support.csv")),
-    grids = file.path(dir, paste0(prefix, "-grids.csv"))
+    grids = file.path(dir, paste0(prefix, "-grids.csv")),
+    tuning_diagnostics = file.path(dir, paste0(prefix, "-tuning-diagnostics.csv")),
+    near_best_parameters = file.path(dir, paste0(prefix, "-near-best-parameters.csv"))
   )
   figure_paths <- c(
     score = file.path(figure_dir, paste0(prefix, "-scores.png")),
     percent_from_best = file.path(figure_dir, paste0(prefix, "-percent-from-best.png")),
-    best_parameters = file.path(figure_dir, paste0(prefix, "-best-parameters.png"))
+    best_parameters = file.path(figure_dir, paste0(prefix, "-best-parameters.png")),
+    score_distribution = file.path(figure_dir, paste0(prefix, "-score-distribution.png")),
+    near_best_parameters = file.path(figure_dir, paste0(prefix, "-near-best-parameters.png"))
   )
   report_path <- file.path(dir, paste0(prefix, "-report.md"))
 
@@ -349,9 +440,13 @@ write_surface_comparison_report <- function(comparison,
   )
 
   grids <- popmaps_flatten_surface_comparison_grids(comparison$grids)
+  diagnostics <- popmaps_surface_tuning_diagnostics(comparison)
+  near_best_parameters <- popmaps_surface_near_best_parameter_ranges(comparison)
   popmaps_write_report_table(comparison$summary, table_paths[["summary"]])
   popmaps_write_report_table(comparison$support, table_paths[["support"]])
   popmaps_write_report_table(grids, table_paths[["grids"]])
+  popmaps_write_report_table(diagnostics, table_paths[["tuning_diagnostics"]])
+  popmaps_write_report_table(near_best_parameters, table_paths[["near_best_parameters"]])
 
   popmaps_write_surface_comparison_png(
     figure_paths[["score"]],
@@ -373,6 +468,20 @@ write_surface_comparison_report <- function(comparison,
     height = height,
     res = res,
     expr = plot_surface_comparison(comparison, type = "best_parameters")
+  )
+  popmaps_write_surface_comparison_png(
+    figure_paths[["score_distribution"]],
+    width = width,
+    height = height,
+    res = res,
+    expr = plot_surface_comparison(comparison, type = "score_distribution")
+  )
+  popmaps_write_surface_comparison_png(
+    figure_paths[["near_best_parameters"]],
+    width = width,
+    height = height,
+    res = res,
+    expr = plot_surface_comparison(comparison, type = "near_best_parameters")
   )
 
   tuning_paths <- character()
@@ -636,6 +745,102 @@ popmaps_surface_metric_label <- function(primary_metric) {
   paste0(primary_metric, " (", goal, ")")
 }
 
+popmaps_surface_plot_labels <- function(surface_names, width = 13) {
+  vapply(surface_names, function(surface_name) {
+    label <- gsub("[_]+", " ", surface_name)
+    paste(strwrap(label, width = width), collapse = "\n")
+  }, character(1))
+}
+
+popmaps_surface_tuning_diagnostics <- function(comparison) {
+  popmaps_check_surface_comparison(comparison)
+
+  rows <- lapply(names(comparison$tunings), function(surface_name) {
+    tuning <- comparison$tunings[[surface_name]]
+    diagnostics <- diagnose_tuning(
+      tuning,
+      primary_metric = comparison$primary_metric,
+      near_best_tolerance = comparison$near_best_tolerance
+    )
+    overview <- diagnostics$overview
+    near_best_fraction <- overview$n_near_best / overview$n_evaluated
+    support <- popmaps_tuning_support_label(
+      n_near_best = overview$n_near_best,
+      near_best_fraction = near_best_fraction
+    )
+
+    data.frame(
+      surface_name = surface_name,
+      validation = overview$validation,
+      primary_metric = overview$primary_metric,
+      metric_goal = overview$metric_goal,
+      n_combinations = overview$n_combinations,
+      n_evaluated = overview$n_evaluated,
+      n_complete = overview$n_complete,
+      best_score = overview$best_score,
+      median_score = overview$median_score,
+      worst_score = overview$worst_score,
+      best_vs_median_percent = overview$best_vs_median_percent,
+      best_vs_worst_percent = overview$best_vs_worst_percent,
+      near_best_tolerance = overview$near_best_tolerance,
+      n_near_best = overview$n_near_best,
+      near_best_fraction = near_best_fraction,
+      support = support,
+      tuning_signal = popmaps_tuning_signal_label(
+        best_vs_median_percent = overview$best_vs_median_percent,
+        support = support
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  diagnostics <- do.call(rbind, rows)
+  rownames(diagnostics) <- NULL
+  diagnostics
+}
+
+popmaps_surface_near_best_parameter_ranges <- function(comparison) {
+  popmaps_check_surface_comparison(comparison)
+
+  rows <- lapply(names(comparison$tunings), function(surface_name) {
+    diagnostics <- diagnose_tuning(
+      comparison$tunings[[surface_name]],
+      primary_metric = comparison$primary_metric,
+      near_best_tolerance = comparison$near_best_tolerance
+    )
+    cbind(
+      data.frame(surface_name = surface_name, stringsAsFactors = FALSE),
+      diagnostics$parameter_ranges
+    )
+  })
+
+  ranges <- do.call(rbind, rows)
+  rownames(ranges) <- NULL
+  ranges
+}
+
+popmaps_tuning_support_label <- function(n_near_best, near_best_fraction) {
+  if (n_near_best <= 1 || near_best_fraction <= 0.10) {
+    return("sharp")
+  }
+  if (near_best_fraction <= 0.25) {
+    return("moderate")
+  }
+
+  "broad"
+}
+
+popmaps_tuning_signal_label <- function(best_vs_median_percent, support) {
+  if (is.finite(best_vs_median_percent) && best_vs_median_percent >= 25 && identical(support, "sharp")) {
+    return("strong")
+  }
+  if ((is.finite(best_vs_median_percent) && best_vs_median_percent >= 10) || !identical(support, "broad")) {
+    return("moderate")
+  }
+
+  "weak"
+}
+
 popmaps_plot_bar <- function(values, colors, ylab, main, ...) {
   if (!any(is.finite(values))) {
     stop("No finite values are available to plot.", call. = FALSE)
@@ -645,7 +850,7 @@ popmaps_plot_bar <- function(values, colors, ylab, main, ...) {
   defaults <- list(
     height = values,
     col = colors,
-    las = 2,
+    las = 1,
     ylab = ylab,
     main = main
   )
@@ -655,7 +860,7 @@ popmaps_plot_bar <- function(values, colors, ylab, main, ...) {
 
 popmaps_plot_surface_scores <- function(summary, primary_metric, colors, main, ...) {
   values <- summary$score
-  names(values) <- summary$surface_name
+  names(values) <- popmaps_surface_plot_labels(summary$surface_name)
   plot_main <- if (is.null(main)) "Surface validation score" else main
   mids <- popmaps_plot_bar(
     values = values,
@@ -677,7 +882,7 @@ popmaps_plot_surface_scores <- function(summary, primary_metric, colors, main, .
 
 popmaps_plot_surface_percent_from_best <- function(summary, colors, main, ...) {
   values <- summary$percent_from_best
-  names(values) <- summary$surface_name
+  names(values) <- popmaps_surface_plot_labels(summary$surface_name)
   plot_main <- if (is.null(main)) "Percent loss from best surface" else main
   mids <- popmaps_plot_bar(
     values = values,
@@ -715,11 +920,11 @@ popmaps_plot_surface_best_parameters <- function(summary, colors, main, ...) {
   args <- list(...)
   for (parameter in parameters) {
     values <- summary[[parameter]]
-    names(values) <- summary$surface_name
+    names(values) <- popmaps_surface_plot_labels(summary$surface_name)
     plot_args <- list(
       height = values,
       col = colors[summary$surface_name],
-      las = 2,
+      las = 1,
       ylab = parameter,
       main = parameter
     )
@@ -729,6 +934,124 @@ popmaps_plot_surface_best_parameters <- function(summary, colors, main, ...) {
   if (!is.null(main)) {
     graphics::mtext(main, side = 3, outer = TRUE, line = 1)
   }
+}
+
+popmaps_plot_surface_score_distribution <- function(comparison, colors, main, ...) {
+  rows <- popmaps_surface_score_distribution(comparison)
+  if (!any(is.finite(rows$score))) {
+    stop("No finite score values are available to plot.", call. = FALSE)
+  }
+
+  surface_levels <- comparison$summary$surface_name
+  rows$surface_name <- factor(rows$surface_name, levels = surface_levels)
+  labels <- popmaps_surface_plot_labels(surface_levels)
+  plot_main <- if (is.null(main)) "Tuning score distribution" else main
+  args <- list(...)
+  plot_args <- list(
+    formula = score ~ surface_name,
+    data = rows,
+    col = colors[surface_levels],
+    las = 2,
+    ylab = popmaps_surface_metric_label(comparison$primary_metric),
+    xlab = "",
+    main = plot_main,
+    names = labels
+  )
+  plot_args[names(args)] <- args
+  do.call(graphics::boxplot, plot_args)
+
+  best_scores <- comparison$summary$score[match(surface_levels, comparison$summary$surface_name)]
+  graphics::points(seq_along(surface_levels), best_scores, pch = 19, col = colors[surface_levels])
+}
+
+popmaps_surface_score_distribution <- function(comparison) {
+  rows <- lapply(names(comparison$tunings), function(surface_name) {
+    results <- comparison$tunings[[surface_name]]$results
+    data.frame(
+      surface_name = surface_name,
+      score = results[[comparison$primary_metric]],
+      failed_folds = results$failed_folds,
+      n_scored = results$n_scored,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  do.call(rbind, rows)
+}
+
+popmaps_plot_surface_near_best_parameters <- function(comparison, colors, main, ...) {
+  ranges <- popmaps_surface_near_best_parameter_ranges(comparison)
+  parameters <- intersect(
+    c("num_sites", "num_tested", "empirical_pt_dist", "popmod"),
+    unique(ranges$parameter)
+  )
+  if (length(parameters) < 1) {
+    stop("No near-best parameter ranges are available to plot.", call. = FALSE)
+  }
+
+  surface_names <- comparison$summary$surface_name
+  surface_labels <- popmaps_surface_plot_labels(surface_names)
+  old_par <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(old_par), add = TRUE)
+  n_col <- min(2, length(parameters))
+  n_row <- ceiling(length(parameters) / n_col)
+  graphics::par(mfrow = c(n_row, n_col), mar = c(7, 4, 3, 1), oma = c(0, 0, 3, 0))
+
+  for (parameter in parameters) {
+    parameter_rows <- ranges[ranges$parameter == parameter, , drop = FALSE]
+    parameter_rows <- parameter_rows[match(surface_names, parameter_rows$surface_name), , drop = FALSE]
+    y_range <- range(
+      c(parameter_rows$full_min, parameter_rows$full_max, parameter_rows$near_best_min,
+        parameter_rows$near_best_max, parameter_rows$best_value),
+      finite = TRUE
+    )
+    if (!all(is.finite(y_range))) {
+      next
+    }
+    if (diff(y_range) == 0) {
+      y_range <- y_range + c(-0.5, 0.5)
+    }
+
+    graphics::plot(
+      seq_along(surface_names),
+      parameter_rows$best_value,
+      ylim = y_range,
+      xaxt = "n",
+      xlab = "",
+      ylab = parameter,
+      main = parameter,
+      pch = 19,
+      col = colors[surface_names],
+      ...
+    )
+    graphics::axis(1, at = seq_along(surface_names), labels = surface_labels, las = 1, cex.axis = 0.75)
+    graphics::segments(
+      seq_along(surface_names),
+      parameter_rows$full_min,
+      seq_along(surface_names),
+      parameter_rows$full_max,
+      col = "gray75",
+      lwd = 4
+    )
+    graphics::segments(
+      seq_along(surface_names),
+      parameter_rows$near_best_min,
+      seq_along(surface_names),
+      parameter_rows$near_best_max,
+      col = colors[surface_names],
+      lwd = 3
+    )
+    graphics::points(
+      seq_along(surface_names),
+      parameter_rows$best_value,
+      pch = 19,
+      col = colors[surface_names],
+      cex = 1.2
+    )
+  }
+
+  plot_main <- if (is.null(main)) "Near-best parameter ranges" else main
+  graphics::mtext(plot_main, side = 3, outer = TRUE, line = 1)
 }
 
 popmaps_check_report_paths <- function(paths, overwrite) {
@@ -857,6 +1180,8 @@ popmaps_surface_comparison_markdown <- function(comparison,
     paste0("- Summary: `", basename(table_paths[["summary"]]), "`"),
     paste0("- Support: `", basename(table_paths[["support"]]), "`"),
     paste0("- Tuning grids: `", basename(table_paths[["grids"]]), "`"),
+    paste0("- Tuning diagnostics: `", basename(table_paths[["tuning_diagnostics"]]), "`"),
+    paste0("- Near-best parameter ranges: `", basename(table_paths[["near_best_parameters"]]), "`"),
     "",
     "## Surface Support",
     "",
@@ -875,11 +1200,22 @@ popmaps_surface_comparison_markdown <- function(comparison,
         "popmod", "empirical_pt_dist", "failed_folds")
     ),
     "",
+    "## Tuning Diagnostics",
+    "",
+    popmaps_markdown_table(
+      popmaps_surface_tuning_diagnostics(comparison),
+      c("surface_name", "support", "tuning_signal", "n_near_best",
+        "near_best_fraction", "best_score", "median_score",
+        "best_vs_median_percent")
+    ),
+    "",
     "## Figures",
     "",
     paste0("- `figures/", basename(figure_paths[["score"]]), "`: primary validation score by candidate surface."),
     paste0("- `figures/", basename(figure_paths[["percent_from_best"]]), "`: relative loss from the best surface."),
-    paste0("- `figures/", basename(figure_paths[["best_parameters"]]), "`: best parameter values selected for each surface.")
+    paste0("- `figures/", basename(figure_paths[["best_parameters"]]), "`: best parameter values selected for each surface."),
+    paste0("- `figures/", basename(figure_paths[["score_distribution"]]), "`: tuning score distribution across parameter combinations."),
+    paste0("- `figures/", basename(figure_paths[["near_best_parameters"]]), "`: full and near-best parameter ranges by surface.")
   )
 
   if (length(tuning_paths) > 0) {

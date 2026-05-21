@@ -24,6 +24,7 @@ compare_popmaps_surfaces(
  },
   surface_grid = c("surface_specific", "shared"),
   near_best_tolerance = 0.05,
+  cache = TRUE,
   quiet = TRUE
 )
 }
@@ -84,6 +85,11 @@ geographic sampling-site distances and uses them for every surface.}
 surfaces as statistically near-best. The default keeps surfaces within 5\%
 of the best primary metric score.}
 
+\item{cache}{Logical. If \code{TRUE}, reuse in-memory geographic and least-cost
+distance objects while resolving tuning grids and evaluating candidate
+surfaces. This is useful when several surfaces or validation designs reuse
+the same empirical coordinates.}
+
 \item{quiet}{Logical. If \code{FALSE}, print a short completion message.}
 }
 \value{
@@ -95,6 +101,7 @@ A \code{popmaps_surface_comparison} object with:
 \item{support}{One-row conservative interpretation of surface support.}
 \item{tunings}{Named list of \code{popmaps_tuning} objects, one per surface.}
 \item{grids}{Named list of surface-specific tuning grids used for the comparison.}
+\item{cache}{Summary of in-memory distance-cache use during the comparison.}
 }
 }
 \description{

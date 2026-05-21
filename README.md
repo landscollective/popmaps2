@@ -42,9 +42,12 @@ Evolution*, 13, 2668-2681. <https://doi.org/10.1111/2041-210X.13902>
 - tuning with leave-one-out and spatial-block validation;
 - repeated spatial-block validation for uncertainty in validation design;
 - candidate-surface comparison with matched validation folds;
+- in-memory distance caching during candidate-surface comparison and adaptive
+  tuning;
 - import helpers for raster stacks, point-derived geographic templates, `sf`
   locations, and raster-like EEMS/FEEMS exports;
-- report helpers for tuning and surface-comparison diagnostics;
+- report helpers for tuning and surface-comparison diagnostics, including
+  near-best parameter ranges and score-distribution plots;
 - local validation scripts for empirical example data kept outside the package.
 
 ## Scope
@@ -278,6 +281,7 @@ surface_comparison <- compare_popmaps_surfaces(
   surfaces = candidate_surfaces,
   validation = "spatial_block",
   spatial_block_repeats = 5,
+  cache = TRUE,
   quiet = TRUE
 )
 
@@ -495,7 +499,7 @@ cancels older runs on the same PR or branch.
 | `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
 | `tune_popmaps()` | Tune geographic or least-cost POPMAPS parameters with leave-one-out or spatial-block validation. |
 | `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
-| `plot_surface_comparison()` | Plot surface validation scores, support gaps, and selected best parameters. |
+| `plot_surface_comparison()` | Plot surface validation scores, support gaps, selected best parameters, score distributions, and near-best parameter ranges. |
 | `write_surface_comparison_report()` | Write surface-comparison CSVs, diagnostic figures, and a Markdown report. |
 | `prepare_popmaps_surface()` | Declare candidate raster semantics before modeling. |
 | `surface_from_points()` | Build a simple geographic/template prediction surface from empirical coordinates. |
@@ -539,7 +543,6 @@ only move forward as small, testable features:
 - precomputed site-site and site-cell distance inputs;
 - additional landscape-distance models beyond least-cost distance;
 - directional or asymmetric movement surfaces;
-- diagnostic plots showing why candidate surfaces differ;
 - import helpers for common ancestry-output formats;
 - categorical land-cover reclassification into suitability, conductance, or
   resistance values.
@@ -548,10 +551,12 @@ only move forward as small, testable features:
 
 Near-term priorities are:
 
-1. run empirical validation across all example species with the current
-   `G`/`C` surface workflow;
-2. benchmark and cache expensive distance calculations;
-3. improve modern plotting and map outputs;
+1. run empirical validation against richer candidate surfaces, including
+   Circuitscape, EEMS, FEEMS, and other user-supplied resistance or conductance
+   layers;
+2. benchmark and extend distance caching to optional precomputed distance
+   inputs;
+3. improve modern map outputs for final ancestry and uncertainty rasters;
 4. publish pkgdown documentation;
 5. prepare the first tagged development release.
 

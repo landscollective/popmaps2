@@ -266,7 +266,7 @@ suggest_surface_tuning_grid <- function(input_raster,
   coords <- as.matrix(locations[, 2:3, drop = FALSE])
 
   if (surface == "G") {
-    distance_matrix <- popmaps_empirical_site_distances(coords)
+    distance_matrix <- popmaps_cached_empirical_site_distances(coords)
     grid_surface_values <- NA_character_
     distance_units <- "km"
   } else {
@@ -284,10 +284,10 @@ suggest_surface_tuning_grid <- function(input_raster,
         resistance_epsilon = resistance_epsilon
       )
     }
-    graph <- popmaps_cost_distance_graph(surface_object, directions = 8)
-    distance_matrix <- popmaps_cost_distance_matrix(
+    graph <- popmaps_cached_cost_graph(surface_object, directions = 8)
+    distance_matrix <- popmaps_cached_cost_site_distances(
       surface = surface_object,
-      from_coords = coords,
+      coords = coords,
       directions = 8,
       graph = graph
     )
@@ -558,6 +558,7 @@ adaptive_tune_popmaps <- function(input_raster = "",
     search_space = search_space,
     method = method
   )
+  distance_cache <- popmaps_new_distance_cache(enabled = TRUE)
   initial_tuning <- popmaps_evaluate_tuning_grid(
     input_raster = input_raster,
     input_locs = input_locs,
@@ -572,7 +573,9 @@ adaptive_tune_popmaps <- function(input_raster = "",
     primary_metric = primary_metric,
     dist_prob_func = dist_prob_func,
     quiet = TRUE,
-    call = match.call()
+    call = match.call(),
+    distance_cache = distance_cache,
+    surface_cache_key = "adaptive_geographic"
   )
 
   if (n_refine > 0) {
@@ -621,7 +624,9 @@ adaptive_tune_popmaps <- function(input_raster = "",
     quiet = quiet,
     call = match.call(),
     class = c("popmaps_adaptive_tuning", "popmaps_tuning"),
-    search = search
+    search = search,
+    distance_cache = distance_cache,
+    surface_cache_key = "adaptive_geographic"
   )
 
   tuning
@@ -845,7 +850,9 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
                                          quiet,
                                          call,
                                          class = "popmaps_tuning",
-                                         search = NULL) {
+                                         search = NULL,
+                                         distance_cache = NULL,
+                                         surface_cache_key = NULL) {
   if (inherits(input_raster, "popmaps_surface")) {
     surface_object <- input_raster
     if (!identical(surface_object$surface, surface)) {
@@ -879,7 +886,9 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
     coords = coords,
     surface_values = surface_values,
     rescale_conductance = rescale_conductance,
-    resistance_epsilon = resistance_epsilon
+    resistance_epsilon = resistance_epsilon,
+    distance_cache = distance_cache,
+    surface_cache_key = surface_cache_key
   )
   axis_count <- ncol(locations) - 3
   validation_folds <- popmaps_make_validation_folds(
@@ -1443,12 +1452,22 @@ popmaps_prepare_tuning_distance_context <- function(surface,
                                                     coords,
                                                     surface_values,
                                                     rescale_conductance,
-                                                    resistance_epsilon) {
+                                                    resistance_epsilon,
+                                                    distance_cache = NULL,
+                                                    surface_cache_key = NULL) {
+  if (is.null(surface_cache_key)) {
+    surface_cache_key <- surface
+  }
+
   if (surface == "G") {
     return(list(
       surface = "G",
       distance_units = "km",
-      site_distances = popmaps_empirical_site_distances(coords)
+      site_distances = popmaps_cached_empirical_site_distances(
+        coords = coords,
+        distance_cache = distance_cache,
+        cache_key = surface_cache_key
+      )
     ))
   }
 
@@ -1462,13 +1481,20 @@ popmaps_prepare_tuning_distance_context <- function(surface,
     )
   }
 
-  graph <- popmaps_cost_distance_graph(surface_object, directions = 8)
+  graph <- popmaps_cached_cost_graph(
+    surface = surface_object,
+    directions = 8,
+    distance_cache = distance_cache,
+    cache_key = surface_cache_key
+  )
   site_distances <- tryCatch(
-    popmaps_cost_distance_matrix(
+    popmaps_cached_cost_site_distances(
       surface = surface_object,
-      from_coords = coords,
+      coords = coords,
       directions = 8,
-      graph = graph
+      graph = graph,
+      distance_cache = distance_cache,
+      cache_key = surface_cache_key
     ),
     error = function(err) {
       stop(

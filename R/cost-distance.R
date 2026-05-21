@@ -102,6 +102,160 @@ popmaps_cost_distance_to_cells <- function(surface,
   cell_distances
 }
 
+popmaps_new_distance_cache <- function(enabled = TRUE) {
+  cache <- new.env(parent = emptyenv())
+  cache$.enabled <- isTRUE(enabled)
+  cache$.hits <- 0L
+  cache$.misses <- 0L
+  cache$.sets <- 0L
+  cache
+}
+
+popmaps_distance_cache_get <- function(cache, key) {
+  if (is.null(cache) || !isTRUE(cache$.enabled)) {
+    return(NULL)
+  }
+
+  if (exists(key, envir = cache, inherits = FALSE)) {
+    cache$.hits <- cache$.hits + 1L
+    return(get(key, envir = cache, inherits = FALSE))
+  }
+
+  cache$.misses <- cache$.misses + 1L
+  NULL
+}
+
+popmaps_distance_cache_set <- function(cache, key, value) {
+  if (!is.null(cache) && isTRUE(cache$.enabled)) {
+    assign(key, value, envir = cache)
+    cache$.sets <- cache$.sets + 1L
+  }
+
+  value
+}
+
+popmaps_distance_cache_summary <- function(cache) {
+  if (is.null(cache)) {
+    return(data.frame(
+      enabled = FALSE,
+      entries = 0L,
+      hits = 0L,
+      misses = 0L,
+      sets = 0L
+    ))
+  }
+
+  keys <- setdiff(ls(envir = cache, all.names = TRUE), c(".enabled", ".hits", ".misses", ".sets"))
+  data.frame(
+    enabled = isTRUE(cache$.enabled),
+    entries = length(keys),
+    hits = cache$.hits,
+    misses = cache$.misses,
+    sets = cache$.sets
+  )
+}
+
+popmaps_distance_cache_key <- function(...) {
+  parts <- vapply(list(...), popmaps_distance_cache_part, character(1))
+  paste(parts, collapse = "||")
+}
+
+popmaps_distance_cache_part <- function(x) {
+  x <- paste(as.character(x), collapse = ",")
+  gsub("[|[:space:]]+", "_", x)
+}
+
+popmaps_coord_signature <- function(coords) {
+  coords <- popmaps_coords_to_matrix(coords, "`coords`")
+  values <- c(
+    nrow(coords),
+    ncol(coords),
+    colSums(coords),
+    colSums(coords^2),
+    apply(coords, 2, min),
+    apply(coords, 2, max)
+  )
+
+  paste(signif(values, 12), collapse = ",")
+}
+
+popmaps_cached_empirical_site_distances <- function(coords,
+                                                    distance_cache = NULL,
+                                                    cache_key = "geographic") {
+  key <- popmaps_distance_cache_key(
+    "site_distances",
+    "G",
+    cache_key,
+    popmaps_coord_signature(coords)
+  )
+  cached <- popmaps_distance_cache_get(distance_cache, key)
+  if (!is.null(cached)) {
+    return(cached)
+  }
+
+  popmaps_distance_cache_set(
+    distance_cache,
+    key,
+    popmaps_empirical_site_distances(coords)
+  )
+}
+
+popmaps_cached_cost_graph <- function(surface,
+                                      directions = 8,
+                                      distance_cache = NULL,
+                                      cache_key = "surface") {
+  key <- popmaps_distance_cache_key("cost_graph", cache_key, directions)
+  cached <- popmaps_distance_cache_get(distance_cache, key)
+  if (!is.null(cached)) {
+    return(cached)
+  }
+
+  popmaps_distance_cache_set(
+    distance_cache,
+    key,
+    popmaps_cost_distance_graph(surface, directions = directions)
+  )
+}
+
+popmaps_cached_cost_site_distances <- function(surface,
+                                               coords,
+                                               directions = 8,
+                                               graph = NULL,
+                                               distance_cache = NULL,
+                                               cache_key = "surface") {
+  key <- popmaps_distance_cache_key(
+    "site_distances",
+    "C",
+    cache_key,
+    directions,
+    popmaps_coord_signature(coords)
+  )
+  cached <- popmaps_distance_cache_get(distance_cache, key)
+  if (!is.null(cached)) {
+    return(cached)
+  }
+
+  if (is.null(graph)) {
+    graph <- popmaps_cached_cost_graph(
+      surface = surface,
+      directions = directions,
+      distance_cache = distance_cache,
+      cache_key = cache_key
+    )
+  }
+
+  popmaps_distance_cache_set(
+    distance_cache,
+    key,
+    popmaps_cost_distance_matrix(
+      surface = surface,
+      from_coords = coords,
+      directions = directions,
+      graph = graph
+    )
+  )
+}
+
 popmaps_cost_adjacency <- function(raster_template,
                                    conductance_values,
                                    directions) {

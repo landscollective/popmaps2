@@ -44,7 +44,7 @@ test_that("compare_popmaps_surfaces ranks prepared and specified surfaces", {
     c(
       "summary", "best", "near_best", "support", "tunings",
       "grids", "primary_metric", "validation", "surface_grid", "near_best_tolerance",
-      "spatial_block_seed", "call"
+      "cache", "spatial_block_seed", "call"
     )
   )
   expect_equal(nrow(comparison$summary), 2)
@@ -56,6 +56,9 @@ test_that("compare_popmaps_surfaces ranks prepared and specified surfaces", {
   expect_equal(nrow(comparison$best), 1)
   expect_true(comparison$best$surface_name %in% comparison$summary$surface_name)
   expect_true(comparison$support$n_near_best >= 1)
+  expect_true(comparison$cache$enabled)
+  expect_gt(comparison$cache$entries, 0)
+  expect_gt(comparison$cache$hits, 0)
 })
 
 test_that("compare_popmaps_surfaces can suggest surface-specific distance grids", {
@@ -89,6 +92,33 @@ test_that("compare_popmaps_surfaces can suggest surface-specific distance grids"
     sort(unique(comparison$tunings$suitability$results$popmod)),
     comparison$grids$suitability$popmod
   )
+})
+
+test_that("compare_popmaps_surfaces can disable in-memory distance caching", {
+  fixture <- surface_comparison_fixture()
+  surfaces <- list(
+    geographic = prepare_popmaps_surface(fixture$raster, surface = "G"),
+    suitability = prepare_popmaps_surface(
+      fixture$raster,
+      surface = "C",
+      surface_values = "suitability"
+    )
+  )
+
+  comparison <- compare_popmaps_surfaces(
+    input_locs = fixture$locs,
+    surfaces = surfaces,
+    empirical_pt_dist = 0,
+    num_sites = 3,
+    num_tested = 2,
+    popmod = -0.1,
+    cache = FALSE,
+    quiet = TRUE
+  )
+
+  expect_false(comparison$cache$enabled)
+  expect_equal(comparison$cache$entries, 0)
+  expect_equal(comparison$cache$hits, 0)
 })
 
 test_that("compare_popmaps_surfaces uses matched repeated spatial blocks", {
@@ -200,6 +230,8 @@ test_that("plot_surface_comparison draws supported plot types", {
   expect_silent(plot_surface_comparison(comparison, type = "score"))
   expect_silent(plot_surface_comparison(comparison, type = "percent_from_best"))
   expect_silent(plot_surface_comparison(comparison, type = "best_parameters"))
+  expect_silent(plot_surface_comparison(comparison, type = "score_distribution"))
+  expect_silent(plot_surface_comparison(comparison, type = "near_best_parameters"))
   expect_error(plot_surface_comparison(list()), "compare_popmaps_surfaces")
 })
 
@@ -236,8 +268,20 @@ test_that("write_surface_comparison_report writes tables, figures, and markdown"
   expect_true(all(file.exists(manifest$tables)))
   expect_true(all(file.exists(manifest$figures)))
   expect_true(all(file.exists(manifest$tuning_results)))
+  expect_named(
+    manifest$tables,
+    c("summary", "support", "grids", "tuning_diagnostics", "near_best_parameters")
+  )
+  expect_named(
+    manifest$figures,
+    c("score", "percent_from_best", "best_parameters",
+      "score_distribution", "near_best_parameters")
+  )
   expect_equal(nrow(utils::read.csv(manifest$tables[["summary"]])), 2)
+  expect_equal(nrow(utils::read.csv(manifest$tables[["tuning_diagnostics"]])), 2)
+  expect_true(nrow(utils::read.csv(manifest$tables[["near_best_parameters"]])) >= 2)
   expect_match(paste(readLines(manifest$report), collapse = "\n"), "Best surface")
+  expect_match(paste(readLines(manifest$report), collapse = "\n"), "Tuning Diagnostics")
 
   expect_error(
     write_surface_comparison_report(

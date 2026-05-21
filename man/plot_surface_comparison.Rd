@@ -6,7 +6,8 @@
 \usage{
 plot_surface_comparison(
   comparison,
-  type = c("score", "percent_from_best", "best_parameters"),
+  type = c("score", "percent_from_best", "best_parameters", "score_distribution",
+    "near_best_parameters"),
   col = NULL,
   main = NULL,
   ...
@@ -19,7 +20,9 @@ plot_surface_comparison(
 \item{type}{Plot type. \code{"score"} plots the primary validation metric by
 surface. \code{"percent_from_best"} plots relative loss from the best surface.
 \code{"best_parameters"} plots the best parameter values selected for each
-surface.}
+surface. \code{"score_distribution"} shows whether each surface has a sharp or
+broad tuning optimum. \code{"near_best_parameters"} plots full and near-best
+parameter ranges for each surface.}
 
 \item{col}{Optional vector of plotting colors. Named vectors are matched to
 surface names; unnamed vectors are recycled in comparison order.}

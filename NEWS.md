@@ -42,3 +42,5 @@
 - Updated default `surface = "C"` interpolation to select candidate empirical sites by least-cost distance, while legacy geographic prefiltering remains available only through `legacy_compat = TRUE`.
 - Added unit-neutral `half_distance` and `ten_pct_distance` tuning summaries while retaining the older `_km` columns for compatibility.
 - Changed optional conductance rescaling to divide by maximum conductance so zero-valued barriers remain zero instead of turning the minimum positive conductance into a barrier.
+- Added in-memory distance caching for candidate-surface comparison and adaptive tuning so repeated grid suggestion and scoring steps can reuse geographic and least-cost distance objects.
+- Expanded `plot_surface_comparison()` and `write_surface_comparison_report()` with tuning score distributions, near-best parameter-range plots, and diagnostic CSVs for interpreting whether surface and parameter support is sharp or broad.
