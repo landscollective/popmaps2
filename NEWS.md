@@ -42,4 +42,4 @@
 - Updated default `surface = "C"` interpolation to select candidate empirical sites by least-cost distance, while legacy geographic prefiltering remains available only through `legacy_compat = TRUE`.
 - Added unit-neutral `half_distance` and `ten_pct_distance` tuning summaries while retaining the older `_km` columns for compatibility.
 - Changed optional conductance rescaling to divide by maximum conductance so zero-valued barriers remain zero instead of turning the minimum positive conductance into a barrier.
-- Added `plot_popmaps()` and `write_popmaps_plot()` as the modern POPMAPS visualization layer for ancestry-probability, hard-boundary, and ancestry-axis map outputs.
+- Added `plot_popmaps()` and `write_popmaps_plot()` as the modern POPMAPS visualization layer for ancestry-probability, hard-boundary, and ancestry-axis map outputs, including a manuscript-style preset inspired by Massatti and Winkler (2022).

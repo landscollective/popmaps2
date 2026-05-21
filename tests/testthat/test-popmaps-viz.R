@@ -26,6 +26,17 @@ test_that("plot_popmaps draws supported modern map types", {
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "boundary", sites = "points", legend = FALSE))
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "axis", axis = 1, sites = "none", legend = FALSE))
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "axis", axis = "axis_2", sites = "none", legend = FALSE))
+  expect_silent(
+    plot_popmaps(
+      result,
+      ex_raster,
+      hija_struc,
+      type = "ancestry",
+      style = "manuscript",
+      background_threshold = 0,
+      legend = FALSE
+    )
+  )
 })
 
 test_that("write_popmaps_plot writes a PNG and protects existing files", {
@@ -62,6 +73,10 @@ test_that("plot_popmaps validates axis and site inputs", {
   expect_error(
     plot_popmaps(result, ex_raster, type = "axis", axis = 99),
     "available ancestry-axis"
+  )
+  expect_error(
+    plot_popmaps(result, ex_raster, background_threshold = 0.1, legend = FALSE),
+    "requires"
   )
   expect_error(
     plot_popmaps(result, ex_raster, two_axis_locs, sites = "points"),

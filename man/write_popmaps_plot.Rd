@@ -10,11 +10,19 @@ write_popmaps_plot(
   path,
   input_locs = NULL,
   type = c("ancestry", "boundary", "axis"),
+  style = c("modern", "manuscript"),
   axis = 1,
   sites = c("pies", "points", "none"),
+  site_legend = TRUE,
   boundaries = TRUE,
   palette = "Viridis",
   boundary_palette = "Dark 3",
+  background_raster = NULL,
+  background_threshold = NULL,
+  background_palette = "manuscript_background",
+  state_lines = FALSE,
+  state_col = "grey15",
+  state_lwd = 0.8,
   n = 100,
   legend = TRUE,
   axes = TRUE,
@@ -48,12 +56,20 @@ sampling locations are drawn as ancestry pies or dominant-ancestry points.}
 probability layer, \code{"boundary"} plots hard population assignments, and
 \code{"axis"} plots one ancestry-axis probability layer.}
 
+\item{style}{Plot style. \code{"modern"} uses the default popmaps2 map style.
+\code{"manuscript"} uses a Massatti and Winkler (2022)-inspired style with
+grayscale probabilities, colored hard-boundary outlines, muted suitability
+background, and state outlines when available.}
+
 \item{axis}{Ancestry axis used when \code{type = "axis"}. Supply either an integer
 axis number or a layer name such as \code{"axis_1"}.}
 
 \item{sites}{How to draw empirical locations when \code{input_locs} is supplied.
 \code{"pies"} draws ancestry-proportion pies, \code{"points"} draws points colored by
 dominant ancestry, and \code{"none"} suppresses site symbols.}
+
+\item{site_legend}{Logical. If \code{TRUE}, draw an ancestry-axis legend for site
+symbols.}
 
 \item{boundaries}{Logical. If \code{TRUE}, hard-boundary outlines are overlaid on
 ancestry and axis maps.}
@@ -66,6 +82,23 @@ A custom color vector may also be supplied.}
 \item{boundary_palette}{Categorical color palette for ancestry axes and hard
 boundaries. Named palettes are matched to base R HCL palettes, or a custom
 color vector may be supplied.}
+
+\item{background_raster}{Optional suitability, habitat, or prediction raster
+drawn beneath the POPMAPS probability layer. In \code{style = "manuscript"}, this
+defaults to \code{input_raster}.}
+
+\item{background_threshold}{Optional numeric cutoff. When supplied, ancestry
+probability or axis values are shown only where \code{background_raster} is
+greater than or equal to the cutoff; lower cells show only the background.}
+
+\item{background_palette}{Color palette for \code{background_raster}.}
+
+\item{state_lines}{Logical. If \code{TRUE}, overlay state boundaries from the
+\code{maps} package. This is intended for US longitude/latitude outputs.}
+
+\item{state_col}{Color for state boundaries.}
+
+\item{state_lwd}{Line width for state boundaries.}
 
 \item{n}{Number of colors used for continuous raster maps.}
 

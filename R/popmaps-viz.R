@@ -13,11 +13,17 @@
 #' @param type Map type to draw. `"ancestry"` plots the maximum ancestry
 #'   probability layer, `"boundary"` plots hard population assignments, and
 #'   `"axis"` plots one ancestry-axis probability layer.
+#' @param style Plot style. `"modern"` uses the default popmaps2 map style.
+#'   `"manuscript"` uses a Massatti and Winkler (2022)-inspired style with
+#'   grayscale probabilities, colored hard-boundary outlines, muted suitability
+#'   background, and state outlines when available.
 #' @param axis Ancestry axis used when `type = "axis"`. Supply either an integer
 #'   axis number or a layer name such as `"axis_1"`.
 #' @param sites How to draw empirical locations when `input_locs` is supplied.
 #'   `"pies"` draws ancestry-proportion pies, `"points"` draws points colored by
 #'   dominant ancestry, and `"none"` suppresses site symbols.
+#' @param site_legend Logical. If `TRUE`, draw an ancestry-axis legend for site
+#'   symbols.
 #' @param boundaries Logical. If `TRUE`, hard-boundary outlines are overlaid on
 #'   ancestry and axis maps.
 #' @param palette Continuous color palette for ancestry and axis maps. Named
@@ -27,6 +33,17 @@
 #' @param boundary_palette Categorical color palette for ancestry axes and hard
 #'   boundaries. Named palettes are matched to base R HCL palettes, or a custom
 #'   color vector may be supplied.
+#' @param background_raster Optional suitability, habitat, or prediction raster
+#'   drawn beneath the POPMAPS probability layer. In `style = "manuscript"`, this
+#'   defaults to `input_raster`.
+#' @param background_threshold Optional numeric cutoff. When supplied, ancestry
+#'   probability or axis values are shown only where `background_raster` is
+#'   greater than or equal to the cutoff; lower cells show only the background.
+#' @param background_palette Color palette for `background_raster`.
+#' @param state_lines Logical. If `TRUE`, overlay state boundaries from the
+#'   `maps` package. This is intended for US longitude/latitude outputs.
+#' @param state_col Color for state boundaries.
+#' @param state_lwd Line width for state boundaries.
 #' @param n Number of colors used for continuous raster maps.
 #' @param legend Logical. If `TRUE`, draw raster and site legends.
 #' @param axes Logical. If `TRUE`, draw map axes.
@@ -63,11 +80,19 @@ plot_popmaps <- function(pop_raster_list,
                          input_raster,
                          input_locs = NULL,
                          type = c("ancestry", "boundary", "axis"),
+                         style = c("modern", "manuscript"),
                          axis = 1,
                          sites = c("pies", "points", "none"),
+                         site_legend = TRUE,
                          boundaries = TRUE,
                          palette = "Viridis",
                          boundary_palette = "Dark 3",
+                         background_raster = NULL,
+                         background_threshold = NULL,
+                         background_palette = "manuscript_background",
+                         state_lines = FALSE,
+                         state_col = "grey15",
+                         state_lwd = 0.8,
                          n = 100,
                          legend = TRUE,
                          axes = TRUE,
@@ -81,16 +106,46 @@ plot_popmaps <- function(pop_raster_list,
                          add = FALSE,
                          ...) {
   type <- match.arg(type)
+  style <- match.arg(style)
   sites <- match.arg(sites)
+  if (style == "manuscript") {
+    if (missing(palette)) {
+      palette <- "manuscript_probability"
+    }
+    if (missing(boundary_palette)) {
+      boundary_palette <- "manuscript_axes"
+    }
+    if (is.null(background_raster)) {
+      background_raster <- input_raster
+    }
+    if (missing(n)) {
+      n <- 10
+    }
+    if (missing(boundary_lwd)) {
+      boundary_lwd <- 2.2
+    }
+    if (missing(state_lines)) {
+      state_lines <- TRUE
+    }
+    if (missing(site_legend)) {
+      site_legend <- FALSE
+    }
+  }
+  popmaps_check_logical_scalar(site_legend, "`site_legend`")
   popmaps_check_logical_scalar(boundaries, "`boundaries`")
   popmaps_check_logical_scalar(legend, "`legend`")
+  popmaps_check_logical_scalar(state_lines, "`state_lines`")
   popmaps_check_logical_scalar(axes, "`axes`")
   popmaps_check_logical_scalar(frame.plot, "`frame.plot`")
   popmaps_check_logical_scalar(add, "`add`")
   popmaps_check_positive_plot_value(n, "`n`", whole = TRUE)
+  popmaps_check_positive_plot_value(state_lwd, "`state_lwd`")
   popmaps_check_positive_plot_value(boundary_alpha, "`boundary_alpha`", allow_zero = TRUE)
   popmaps_check_positive_plot_value(boundary_lwd, "`boundary_lwd`")
   popmaps_check_positive_plot_value(point_cex, "`point_cex`")
+  if (!is.null(background_threshold)) {
+    popmaps_check_finite_scalar(background_threshold, "`background_threshold`")
+  }
   if (!is.null(pie_radius)) {
     popmaps_check_positive_plot_value(pie_radius, "`pie_radius`")
   }
@@ -104,6 +159,12 @@ plot_popmaps <- function(pop_raster_list,
   axis_colors <- popmaps_viz_palette(boundary_palette, num_axes)
   plot_layer <- popmaps_viz_select_layer(raster_output, type, axis)
   plot_main <- popmaps_viz_title(type, plot_layer, main)
+  background_layer <- popmaps_prepare_viz_background(background_raster, raster_output)
+  probability_breaks <- if (style == "manuscript") {
+    seq(0, 1, length.out = n + 1L)
+  } else {
+    NULL
+  }
   locations <- NULL
   if (!is.null(input_locs) && sites != "none") {
     locations <- popmaps_prepare_locations(input_locs)
@@ -111,29 +172,58 @@ plot_popmaps <- function(pop_raster_list,
   }
 
   if (type == "boundary") {
-    popmaps_plot_boundary_map(
-      boundary = raster_output[["hard_boundary"]],
-      axis_colors = axis_colors,
-      legend = legend,
+    boundary_layer <- popmaps_mask_viz_layer(
+      raster_output[["hard_boundary"]],
+      background_layer,
+      background_threshold
+    )
+    popmaps_draw_background_map(
+      background = background_layer,
+      colors = popmaps_viz_palette(background_palette, max(n, 10L)),
       axes = axes,
       frame.plot = frame.plot,
       main = plot_main,
+      col_na = col_na,
+      add = add
+    )
+    popmaps_plot_boundary_map(
+      boundary = boundary_layer,
+      axis_colors = axis_colors,
+      legend = legend,
+      axes = if (is.null(background_layer)) axes else FALSE,
+      frame.plot = if (is.null(background_layer)) frame.plot else FALSE,
+      main = if (is.null(background_layer)) plot_main else "",
       col_na = col_na,
       boundary_alpha = boundary_alpha,
       boundary_lwd = boundary_lwd,
-      add = add,
+      add = add || !is.null(background_layer),
       ...
     )
   } else {
-    popmaps_plot_continuous_map(
-      layer = raster_output[[plot_layer]],
-      colors = popmaps_viz_palette(palette, n),
-      legend = legend,
+    display_layer <- popmaps_mask_viz_layer(
+      raster_output[[plot_layer]],
+      background_layer,
+      background_threshold
+    )
+    popmaps_draw_background_map(
+      background = background_layer,
+      colors = popmaps_viz_palette(background_palette, max(n, 10L)),
       axes = axes,
       frame.plot = frame.plot,
       main = plot_main,
       col_na = col_na,
-      add = add,
+      add = add
+    )
+    popmaps_plot_continuous_map(
+      layer = display_layer,
+      colors = popmaps_viz_palette(palette, n),
+      breaks = probability_breaks,
+      legend = legend,
+      axes = if (is.null(background_layer)) axes else FALSE,
+      frame.plot = if (is.null(background_layer)) frame.plot else FALSE,
+      main = if (is.null(background_layer)) plot_main else "",
+      col_na = col_na,
+      add = add || !is.null(background_layer),
       ...
     )
     if (isTRUE(boundaries)) {
@@ -145,12 +235,16 @@ plot_popmaps <- function(pop_raster_list,
     }
   }
 
+  if (isTRUE(state_lines)) {
+    popmaps_draw_state_lines(raster_output, state_col = state_col, state_lwd = state_lwd)
+  }
+
   if (!is.null(locations) && sites != "none") {
     popmaps_draw_sites(
       locations = locations,
       axis_colors = axis_colors,
       site_style = sites,
-      legend = legend,
+      legend = site_legend,
       pie_radius = pie_radius,
       point_cex = point_cex,
       map_extent = terra::ext(raster_output)
@@ -184,15 +278,23 @@ plot_popmaps <- function(pop_raster_list,
 #' @export
 write_popmaps_plot <- function(pop_raster_list,
                                input_raster,
-                               path,
-                               input_locs = NULL,
-                               type = c("ancestry", "boundary", "axis"),
-                               axis = 1,
-                               sites = c("pies", "points", "none"),
-                               boundaries = TRUE,
-                               palette = "Viridis",
-                               boundary_palette = "Dark 3",
-                               n = 100,
+	                               path,
+	                               input_locs = NULL,
+	                               type = c("ancestry", "boundary", "axis"),
+	                               style = c("modern", "manuscript"),
+	                               axis = 1,
+	                               sites = c("pies", "points", "none"),
+	                               site_legend = TRUE,
+	                               boundaries = TRUE,
+	                               palette = "Viridis",
+	                               boundary_palette = "Dark 3",
+	                               background_raster = NULL,
+	                               background_threshold = NULL,
+	                               background_palette = "manuscript_background",
+	                               state_lines = FALSE,
+	                               state_col = "grey15",
+	                               state_lwd = 0.8,
+	                               n = 100,
                                legend = TRUE,
                                axes = TRUE,
                                frame.plot = FALSE,
@@ -206,8 +308,32 @@ write_popmaps_plot <- function(pop_raster_list,
                                height = 1400,
                                res = 220,
                                bg = "white",
-                               overwrite = FALSE,
-                               ...) {
+	                               overwrite = FALSE,
+	                               ...) {
+  style <- match.arg(style)
+  if (style == "manuscript") {
+    if (missing(palette)) {
+      palette <- "manuscript_probability"
+    }
+    if (missing(boundary_palette)) {
+      boundary_palette <- "manuscript_axes"
+    }
+    if (missing(background_raster)) {
+      background_raster <- NULL
+    }
+    if (missing(n)) {
+      n <- 10
+    }
+    if (missing(boundary_lwd)) {
+      boundary_lwd <- 2.2
+    }
+    if (missing(state_lines)) {
+      state_lines <- TRUE
+    }
+    if (missing(site_legend)) {
+      site_legend <- FALSE
+    }
+  }
   popmaps_check_character_scalar(path, "`path`")
   popmaps_check_png_dimension(width, "`width`")
   popmaps_check_png_dimension(height, "`height`")
@@ -230,14 +356,22 @@ write_popmaps_plot <- function(pop_raster_list,
   plot_popmaps(
     pop_raster_list = pop_raster_list,
     input_raster = input_raster,
-    input_locs = input_locs,
-    type = type,
-    axis = axis,
-    sites = sites,
-    boundaries = boundaries,
-    palette = palette,
-    boundary_palette = boundary_palette,
-    n = n,
+	    input_locs = input_locs,
+	    type = type,
+	    style = style,
+	    axis = axis,
+	    sites = sites,
+	    site_legend = site_legend,
+	    boundaries = boundaries,
+	    palette = palette,
+	    boundary_palette = boundary_palette,
+	    background_raster = background_raster,
+	    background_threshold = background_threshold,
+	    background_palette = background_palette,
+	    state_lines = state_lines,
+	    state_col = state_col,
+	    state_lwd = state_lwd,
+	    n = n,
     legend = legend,
     axes = axes,
     frame.plot = frame.plot,
@@ -256,6 +390,7 @@ write_popmaps_plot <- function(pop_raster_list,
 
 popmaps_plot_continuous_map <- function(layer,
                                         colors,
+                                        breaks = NULL,
                                         legend,
                                         axes,
                                         frame.plot,
@@ -274,9 +409,38 @@ popmaps_plot_continuous_map <- function(layer,
     main = main,
     add = add
   )
+  if (!is.null(breaks)) {
+    plot_args$breaks <- breaks
+  }
   extra <- list(...)
   plot_args[names(extra)] <- extra
   do.call(terra::plot, plot_args)
+}
+
+popmaps_draw_background_map <- function(background,
+                                        colors,
+                                        axes,
+                                        frame.plot,
+                                        main,
+                                        col_na,
+                                        add) {
+  if (is.null(background)) {
+    return(invisible(FALSE))
+  }
+
+  plot_args <- list(
+    x = background,
+    col = colors,
+    range = c(0, 1),
+    colNA = col_na,
+    axes = axes,
+    legend = FALSE,
+    frame = frame.plot,
+    main = main,
+    add = add
+  )
+  do.call(terra::plot, plot_args)
+  invisible(TRUE)
 }
 
 popmaps_plot_boundary_map <- function(boundary,
@@ -445,6 +609,10 @@ popmaps_viz_title <- function(type, layer, main) {
 
 popmaps_viz_palette <- function(palette, n) {
   if (is.character(palette) && length(palette) == 1L && !is.na(palette) && nzchar(palette)) {
+    special <- popmaps_special_viz_palette(palette, n)
+    if (!is.null(special)) {
+      return(special)
+    }
     palette_name <- popmaps_match_hcl_palette(palette)
     return(grDevices::hcl.colors(n, palette_name))
   }
@@ -480,6 +648,59 @@ popmaps_match_hcl_palette <- function(palette) {
   }
 
   stop("Unknown HCL palette `", palette, "`.", call. = FALSE)
+}
+
+popmaps_special_viz_palette <- function(palette, n) {
+  key <- gsub("[^a-z0-9]", "", tolower(palette))
+  if (key %in% c("manuscriptprobability", "probabilitygray", "probabilitygrey")) {
+    return(grDevices::gray.colors(n, start = 1, end = 0.08))
+  }
+  if (key %in% c("manuscriptbackground", "habitatbackground")) {
+    return(grDevices::colorRampPalette(c("#d8be8d", "#6e665a"))(n))
+  }
+  if (key %in% c("manuscriptaxes", "popmapsmanuscript")) {
+    manuscript_colors <- c("#f5df2e", "#4b155f", "#159b9b")
+    return(rep(manuscript_colors, length.out = n))
+  }
+  NULL
+}
+
+popmaps_prepare_viz_background <- function(background_raster, raster_output) {
+  if (is.null(background_raster)) {
+    return(NULL)
+  }
+
+  background <- popmaps_prepare_raster(background_raster)$rast
+  template <- raster_output[[1]]
+  if (!terra::compareGeom(background, template, stopOnError = FALSE)) {
+    background <- terra::resample(background, template, method = "bilinear")
+  }
+  names(background) <- "background"
+  background
+}
+
+popmaps_mask_viz_layer <- function(layer, background, threshold) {
+  if (is.null(threshold)) {
+    return(layer)
+  }
+  if (is.null(background)) {
+    stop("`background_threshold` requires `background_raster`.", call. = FALSE)
+  }
+  terra::ifel(background >= threshold, layer, NA)
+}
+
+popmaps_draw_state_lines <- function(raster_output, state_col, state_lwd) {
+  extent <- terra::ext(raster_output)
+  maps::map(
+    "state",
+    xlim = c(terra::xmin(extent), terra::xmax(extent)),
+    ylim = c(terra::ymin(extent), terra::ymax(extent)),
+    add = TRUE,
+    col = state_col,
+    lwd = state_lwd,
+    fill = FALSE
+  )
+  invisible(NULL)
 }
 
 popmaps_validate_site_axis_count <- function(locations, num_axes) {

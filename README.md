@@ -351,6 +351,22 @@ write_popmaps_plot(
 )
 ```
 
+Use the manuscript-style preset when you want maps that more closely follow
+the Massatti and Winkler (2022) figure style:
+
+```r
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = "outputs/hija-manuscript-style-map.png",
+  input_locs = hija_struc,
+  type = "ancestry",
+  style = "manuscript",
+  background_threshold = 0.1015,
+  overwrite = TRUE
+)
+```
+
 Run the built-in POPMAPS 1.03 baseline validation:
 
 ```r
