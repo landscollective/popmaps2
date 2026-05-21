@@ -331,6 +331,26 @@ write_popmaps(
 )
 ```
 
+Draw modern map outputs or write a PNG directly:
+
+```r
+plot_popmaps(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  type = "ancestry"
+)
+
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = "outputs/hija-ancestry-map.png",
+  input_locs = hija_struc,
+  type = "ancestry",
+  overwrite = TRUE
+)
+```
+
 Run the built-in POPMAPS 1.03 baseline validation:
 
 ```r
@@ -352,7 +372,10 @@ published POPMAPS equation. They are not forced to sum to one at every cell
 because the distance-decay weights also carry information about confidence and
 distance from empirical data.
 
-Use `popmaps_rast()` and `write_popmaps()` for raster conversion and export.
+Use `popmaps_rast()` and `write_popmaps()` for GeoTIFF conversion and export.
+Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures. The
+older `popmap_viz()` function is retained only for POPMAPS 1.03 plotting
+compatibility.
 
 ## Local Validation Scripts
 
@@ -509,6 +532,8 @@ cancels older runs on the same PR or branch.
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `popmaps_rast()` | Convert `popmaps()` list output to a named `terra::SpatRaster`. |
 | `write_popmaps()` | Write hard boundary, ancestry probability, and ancestry-axis layers as GeoTIFFs. |
+| `plot_popmaps()` | Draw modern ancestry probability, hard-boundary, and ancestry-axis maps. |
+| `write_popmaps_plot()` | Export modern POPMAPS map figures as PNG files. |
 | `anc_extract()` | Extract estimated ancestry coefficients at a coordinate. |
 | `jackknife()` | Legacy leave-one-out parameter testing. |
 | `jackknife_viz()` | Legacy jackknife heatmap visualization. |
