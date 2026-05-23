@@ -2,7 +2,7 @@
 % Please edit documentation in R/popmap_viz.R
 \name{popmap_viz}
 \alias{popmap_viz}
-\title{Visualize an ancestry probability surface}
+\title{Legacy POPMAPS 1.03 ancestry-surface visualization}
 \usage{
 popmap_viz(
   pop_raster_list = "",
@@ -15,34 +15,39 @@ popmap_viz(
 )
 }
 \arguments{
-\item{pop_raster_list}{An R object resulting from executing the function popmaps().}
+\item{pop_raster_list}{An R object resulting from executing \code{\link[=popmaps]{popmaps()}}.}
 
-\item{input_locs}{An R object (rows = total # empirical sites, columns = total # genetic axes + 3)
-with column 1: site name; column 2: decimal longitude; column 3: decimal latitude;
-column 4…column x: ancestry coefficients for genetic axis 1…genetic axis x.
-Function depends on this precise format – see example data hija_struc.}
+\item{input_locs}{An R object with rows as empirical sites and columns as:
+column 1, site name; column 2, decimal longitude or x-coordinate; column
+3, decimal latitude or y-coordinate; columns 4 through n, ancestry
+coefficients for each genetic axis. The function depends on this precise
+column order; see the example data \code{hija_struc}.}
 
-\item{input_raster}{An R RasterLayer object defining the geographic extent for the
-spatial interpolation.}
+\item{input_raster}{An R RasterLayer object defining the geographic extent for
+the spatial interpolation.}
 
-\item{maptype}{A string (either ‘bound’ or ‘ancestry’) that defines the type of map to be drawn.
-Specifying ‘bound’ will draw the hard boundaries only, while specifying ‘ancestry’ will
-draw the hard boundaries and ancestry probability surface.}
+\item{maptype}{A string, either \code{"bound"} or \code{"ancestry"}, that defines the
+map type. \code{"bound"} draws hard boundaries only. \code{"ancestry"} draws hard
+boundaries and the maximum ancestry-probability surface.}
 
-\item{pie_radius}{A float modifying the size of the pie charts depicting empirical ancestry
-coefficients drawn on top of the probability surface (see Fig. 3 in Massatti & Winkler 2022).}
+\item{pie_radius}{A numeric value modifying the size of the pie charts
+depicting empirical ancestry coefficients drawn on top of the probability
+surface.}
 
 \item{boundary_width}{Retained for compatibility with POPMAPS 1.03. Boundary buffering
 previously depended on retired spatial packages and is no longer applied.}
 
-\item{crs}{A string defining a mapping projection. The default defines the Albers Equal Area
-Conic projection suitable for the contiguous United States.}
+\item{crs}{A string defining a mapping projection. The historical default is
+an Albers Equal Area Conic projection used by older POPMAPS examples.}
 }
 \description{
-This function visualizes the results from the function popmaps(). Maps
-can be drawn with hard boundaries only or with hard boundaries plus estimations
-of ancestry probabilities (see maptype). Pie charts representing genetic patterns
-at empirical sampling sites are drawn in all maps.
+This function preserves the original POPMAPS plotting interface
+for compatibility with POPMAPS 1.03-era scripts. New analyses should use
+\code{\link[=plot_popmaps]{plot_popmaps()}} or \code{\link[=write_popmaps_plot]{write_popmaps_plot()}}, which provide terra-based map
+output, manuscript-style defaults, optional background rasters, and PNG
+export. \code{popmap_viz()} can draw hard boundaries only or hard boundaries
+with ancestry probabilities. Pie charts representing empirical ancestry
+patterns are drawn at sampling sites.
 }
 \examples{
 \dontrun{

@@ -45,6 +45,8 @@ Evolution*, 13, 2668-2681. <https://doi.org/10.1111/2041-210X.13902>
 - import helpers for raster stacks, point-derived geographic templates, `sf`
   locations, and raster-like EEMS/FEEMS exports;
 - report helpers for tuning and surface-comparison diagnostics;
+- modern map figures for ancestry probability, hard boundaries, and ancestry
+  axes, including a manuscript-style preset;
 - local validation scripts for empirical example data kept outside the package.
 
 ## Scope
@@ -391,7 +393,7 @@ distance from empirical data.
 Use `popmaps_rast()` and `write_popmaps()` for GeoTIFF conversion and export.
 Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures. The
 older `popmap_viz()` function is retained only for POPMAPS 1.03 plotting
-compatibility.
+compatibility and should not be the starting point for new figures.
 
 ## Local Validation Scripts
 
@@ -591,9 +593,10 @@ Near-term priorities are:
 
 1. run empirical validation across all example species with the current
    `G`/`C` surface workflow;
-2. benchmark and cache expensive distance calculations;
-3. improve modern plotting and map outputs;
-4. publish pkgdown documentation;
+2. benchmark and cache expensive distance calculations for larger rasters;
+3. extend modern map outputs with optional vector overlays, insets, and
+   validation-summary callouts;
+4. publish the pkgdown site after the active documentation PR merges;
 5. prepare the first tagged development release.
 
 ## Citation

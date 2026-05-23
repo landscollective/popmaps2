@@ -177,6 +177,50 @@ The report is meant to support interpretation, not automate judgment. A surface
 that is "indistinguishable" from another candidate should usually be treated as
 equally supported by the current data and validation design.
 
+## Mapping The Selected Surface
+
+Once a surface and parameter set are selected, use the same surface in
+`popmaps()` and export the resulting rasters and map figures. This keeps the
+validation decision connected to the management product.
+
+```{r selected-surface-map}
+best_surface <- comparison$best$surface_name[1]
+selected_surface <- surfaces[[best_surface]]
+selected_params <- comparison$best[1, ]
+
+popmaps_args <- list(
+  input_raster = selected_surface$raster,
+  input_locs = input_locs,
+  surface = selected_surface$surface,
+  empirical_pt_dist = selected_params$empirical_pt_dist,
+  num_sites = selected_params$num_sites,
+  num_tested = selected_params$num_tested,
+  popmod = selected_params$popmod,
+  threshold = 0,
+  ncore = 1
+)
+
+if (identical(selected_surface$surface, "C")) {
+  popmaps_args$surface_values <- selected_surface$surface_values
+}
+
+aps <- do.call(popmaps, popmaps_args)
+
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = selected_surface$raster,
+  path = "selected-surface-map.png",
+  input_locs = input_locs,
+  type = "ancestry",
+  style = "manuscript",
+  overwrite = TRUE
+)
+```
+
+For suitability or conductance surfaces, a `background_threshold` can be added
+to show ancestry probabilities only in cells treated as occupied or suitable.
+That is a visualization mask, not a new model fit.
+
 ## Practical Guidance
 
 Start with a small candidate set:
