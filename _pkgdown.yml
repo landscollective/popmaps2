@@ -21,10 +21,15 @@ reference:
 - title: Core POPMAPS workflow
   contents:
   - popmaps
-  - popmaps_rast
-  - write_popmaps
   - anc_extract
   - validate_popmaps_baseline
+
+- title: Raster outputs and visualization
+  contents:
+  - popmaps_rast
+  - write_popmaps
+  - plot_popmaps
+  - write_popmaps_plot
 
 - title: Tuning and surface comparison
   contents:
@@ -46,7 +51,7 @@ reference:
   - surface_from_eems
   - surface_from_feems
 
-- title: Legacy compatibility and visualization
+- title: Legacy compatibility
   contents:
   - jackknife
   - jackknife_viz

@@ -143,3 +143,49 @@ adaptive$best
 Adaptive tuning should still be interpreted with diagnostics. A sampled search
 can miss narrow optima, so use it as a way to explore parameter space before
 committing to a more focused validation run.
+
+## Mapping A Tuned Run
+
+After choosing a parameter set, run `popmaps()` once with those values and
+export both analysis rasters and map figures. The map products should show the
+same uncertainty that drove parameter selection: broad low-probability regions
+are useful information, not a plotting failure.
+
+```{r tuned-map}
+best <- tuning$best[1, ]
+
+aps <- popmaps(
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  surface = "G",
+  empirical_pt_dist = best$empirical_pt_dist,
+  num_sites = best$num_sites,
+  num_tested = best$num_tested,
+  popmod = best$popmod,
+  threshold = 0,
+  ncore = 1
+)
+
+write_popmaps(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  dir = "tuned-popmaps-output",
+  prefix = "hija-tuned",
+  overwrite = TRUE
+)
+
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = "tuned-popmaps-output/hija-tuned-map.png",
+  input_locs = hija_struc,
+  type = "ancestry",
+  style = "manuscript",
+  background_threshold = 0.1015,
+  overwrite = TRUE
+)
+```
+
+Use `type = "boundary"` for hard ancestry assignments and `type = "axis"` with
+`axis = 1`, `axis = 2`, and so on to inspect individual ancestry-axis surfaces.
+Those views answer different questions and are often worth saving together.

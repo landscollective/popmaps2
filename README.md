@@ -45,6 +45,8 @@ Evolution*, 13, 2668-2681. <https://doi.org/10.1111/2041-210X.13902>
 - import helpers for raster stacks, point-derived geographic templates, `sf`
   locations, and raster-like EEMS/FEEMS exports;
 - report helpers for tuning and surface-comparison diagnostics;
+- modern map figures for ancestry probability, hard boundaries, and ancestry
+  axes, including a manuscript-style preset;
 - local validation scripts for empirical example data kept outside the package.
 
 ## Scope
@@ -331,6 +333,42 @@ write_popmaps(
 )
 ```
 
+Draw modern map outputs or write a PNG directly:
+
+```r
+plot_popmaps(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  input_locs = hija_struc,
+  type = "ancestry"
+)
+
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = "outputs/hija-ancestry-map.png",
+  input_locs = hija_struc,
+  type = "ancestry",
+  overwrite = TRUE
+)
+```
+
+Use the manuscript-style preset when you want maps that more closely follow
+the Massatti and Winkler (2022) figure style:
+
+```r
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = "outputs/hija-manuscript-style-map.png",
+  input_locs = hija_struc,
+  type = "ancestry",
+  style = "manuscript",
+  background_threshold = 0.1015,
+  overwrite = TRUE
+)
+```
+
 Run the built-in POPMAPS 1.03 baseline validation:
 
 ```r
@@ -352,7 +390,10 @@ published POPMAPS equation. They are not forced to sum to one at every cell
 because the distance-decay weights also carry information about confidence and
 distance from empirical data.
 
-Use `popmaps_rast()` and `write_popmaps()` for raster conversion and export.
+Use `popmaps_rast()` and `write_popmaps()` for GeoTIFF conversion and export.
+Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures. The
+older `popmap_viz()` function is retained only for POPMAPS 1.03 plotting
+compatibility and should not be the starting point for new figures.
 
 ## Local Validation Scripts
 
@@ -509,6 +550,8 @@ cancels older runs on the same PR or branch.
 | `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
 | `popmaps_rast()` | Convert `popmaps()` list output to a named `terra::SpatRaster`. |
 | `write_popmaps()` | Write hard boundary, ancestry probability, and ancestry-axis layers as GeoTIFFs. |
+| `plot_popmaps()` | Draw modern ancestry probability, hard-boundary, and ancestry-axis maps. |
+| `write_popmaps_plot()` | Export modern POPMAPS map figures as PNG files. |
 | `anc_extract()` | Extract estimated ancestry coefficients at a coordinate. |
 | `jackknife()` | Legacy leave-one-out parameter testing. |
 | `jackknife_viz()` | Legacy jackknife heatmap visualization. |
@@ -550,9 +593,10 @@ Near-term priorities are:
 
 1. run empirical validation across all example species with the current
    `G`/`C` surface workflow;
-2. benchmark and cache expensive distance calculations;
-3. improve modern plotting and map outputs;
-4. publish pkgdown documentation;
+2. benchmark and cache expensive distance calculations for larger rasters;
+3. extend modern map outputs with optional vector overlays, insets, and
+   validation-summary callouts;
+4. publish the pkgdown site after the active documentation PR merges;
 5. prepare the first tagged development release.
 
 ## Citation
