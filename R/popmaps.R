@@ -55,6 +55,8 @@
 #'     indexing behavior for validation and historical comparisons. The default
 #'     `FALSE` uses actual raster cell centers and selects `surface = "C"`
 #'     candidate sites by least-cost distance.
+#' @param quiet Logical. If `FALSE`, print progress messages for input
+#'     validation, distance preparation, and raster-cell prediction.
 #' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
@@ -79,9 +81,11 @@ popmaps <- function(input_raster='',
                     surface_values = c("suitability", "conductance", "resistance"),
                     rescale_conductance = FALSE,
                     resistance_epsilon = sqrt(.Machine$double.eps),
-                    legacy_compat = FALSE) {
+                    legacy_compat = FALSE,
+                    quiet = TRUE) {
 
   surface_values <- match.arg(surface_values)
+  popmaps_check_quiet(quiet)
   if (!is.logical(rescale_conductance) || length(rescale_conductance) != 1 || is.na(rescale_conductance)) {
     stop("`rescale_conductance` must be `TRUE` or `FALSE`.", call. = FALSE)
   }
@@ -89,6 +93,7 @@ popmaps <- function(input_raster='',
     stop("`legacy_compat` must be `TRUE` or `FALSE`.", call. = FALSE)
   }
 
+  popmaps_inform("Validating raster, empirical locations, and model parameters.", quiet = quiet)
   prepared <- popmaps_prepare_inputs(
     input_raster = input_raster,
     input_locs = input_locs,
@@ -110,6 +115,7 @@ popmaps <- function(input_raster='',
 	species_data <- prepared$locations
 
   if (surface == "G") {
+    popmaps_inform("Running geographic-distance POPMAPS interpolation.", quiet = quiet)
     return(popmaps_geographic_surface(
       raster_surface = raster_surface,
       species_data = species_data,
@@ -119,10 +125,12 @@ popmaps <- function(input_raster='',
       popmod = popmod,
       threshold = threshold,
       dist_prob_func = dist_prob_func,
-      legacy_compat = legacy_compat
+      legacy_compat = legacy_compat,
+      quiet = quiet
     ))
   }
 
+  popmaps_inform("Running conductance/cost-distance POPMAPS interpolation.", quiet = quiet)
   popmaps_cost_surface(
     raster_surface = raster_surface,
     species_data = species_data,
@@ -135,6 +143,7 @@ popmaps <- function(input_raster='',
     surface_values = surface_values,
     rescale_conductance = rescale_conductance,
     resistance_epsilon = resistance_epsilon,
-    legacy_compat = legacy_compat
+    legacy_compat = legacy_compat,
+    quiet = quiet
   )
 } #function end bracket

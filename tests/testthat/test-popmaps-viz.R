@@ -69,6 +69,7 @@ test_that("plot_popmaps validates axis and site inputs", {
   ex_raster <- raster::aggregate(hija_raster, fact = 240)
   result <- popmaps_test_output(ex_raster, n_axes = 3)
   two_axis_locs <- hija_struc[, 1:5]
+  two_axis_locs[, 4:5] <- two_axis_locs[, 4:5] / rowSums(two_axis_locs[, 4:5])
 
   expect_error(
     plot_popmaps(result, ex_raster, type = "axis", axis = 99),

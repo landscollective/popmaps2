@@ -45,6 +45,20 @@ test_that("invalid locations fail before modeling starts", {
     popmaps2:::popmaps_prepare_locations(hija_struc[, 1:3]),
     "at least four columns"
   )
+
+  blank_site <- hija_struc
+  blank_site$V1[1] <- ""
+  expect_error(
+    popmaps2:::popmaps_prepare_locations(blank_site),
+    "site names"
+  )
+
+  duplicated_site <- hija_struc
+  duplicated_site$V1[2] <- duplicated_site$V1[1]
+  expect_error(
+    popmaps2:::popmaps_prepare_locations(duplicated_site),
+    "unique"
+  )
 })
 
 test_that("model argument validation catches impossible site counts", {
@@ -66,6 +80,53 @@ test_that("model argument validation catches impossible site counts", {
       num_tested = 3
     ),
     "num_tested"
+  )
+})
+
+test_that("ancestry coefficients are checked before modeling starts", {
+  zero_ancestry <- hija_struc
+  zero_ancestry[1, 4:ncol(zero_ancestry)] <- 0
+  expect_error(
+    popmaps2:::popmaps_prepare_locations(zero_ancestry),
+    "sum to a positive value"
+  )
+
+  non_normalized <- hija_struc
+  non_normalized[1, 4:ncol(non_normalized)] <- non_normalized[1, 4:ncol(non_normalized)] * 0.5
+  expect_warning(
+    popmaps2:::popmaps_prepare_locations(non_normalized),
+    "usually should sum to 1"
+  )
+})
+
+test_that("empirical coordinates must fall on valid raster cells", {
+  outside_locs <- hija_struc
+  outside_locs$V2[1] <- raster::xmin(hija_raster) - 1
+
+  expect_error(
+    popmaps2:::popmaps_prepare_inputs(
+      input_raster = hija_raster,
+      input_locs = outside_locs,
+      num_sites = 5,
+      num_tested = 2
+    ),
+    "outside the raster extent"
+  )
+
+  na_raster <- terra::rast(hija_raster)
+  first_cell <- terra::cellFromXY(na_raster, as.matrix(hija_struc[1, 2:3, drop = FALSE]))
+  na_values <- terra::values(na_raster, mat = FALSE)
+  na_values[first_cell] <- NA_real_
+  terra::values(na_raster) <- na_values
+
+  expect_error(
+    popmaps2:::popmaps_prepare_inputs(
+      input_raster = na_raster,
+      input_locs = hija_struc,
+      num_sites = 5,
+      num_tested = 2
+    ),
+    "NA` raster cells"
   )
 })
 
@@ -117,6 +178,34 @@ test_that("popmaps accepts terra rasters and descriptive location columns", {
 
   expect_length(result, 2 + ncol(hija_struc) - 3)
   expect_equal(dim(result[[1]]), dim(ex_raster)[1:2])
+})
+
+test_that("popmaps can report progress for longer-running steps", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  messages <- character()
+  result <- withCallingHandlers(
+    popmaps(
+      input_raster = ex_raster,
+      input_locs = hija_struc,
+      surface = "G",
+      empirical_pt_dist = 0,
+      num_sites = 5,
+      num_tested = 2,
+      popmod = -0.05,
+      threshold = 0,
+      ncore = 1,
+      quiet = FALSE
+    ),
+    message = function(msg) {
+      messages <<- c(messages, conditionMessage(msg))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_length(result, 2 + ncol(hija_struc) - 3)
+  expect_true(any(grepl("Validating raster", messages)))
+  expect_true(any(grepl("Preparing geographic distances", messages)))
 })
 
 test_that("popmaps preserves the legacy positional argument order", {

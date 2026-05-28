@@ -6,7 +6,8 @@ popmaps_geographic_surface <- function(raster_surface,
                                        popmod,
                                        threshold,
                                        dist_prob_func,
-                                       legacy_compat = FALSE) {
+                                       legacy_compat = FALSE,
+                                       quiet = TRUE) {
   nrows <- raster_surface@nrows
   ncols <- raster_surface@ncols
 
@@ -16,6 +17,14 @@ popmaps_geographic_surface <- function(raster_surface,
 
   coords <- popmaps_cell_coords(raster_surface, legacy_compat = legacy_compat)
   raster_values <- raster::extract(raster_surface, coords)
+  popmaps_inform(
+    "Preparing geographic distances for ",
+    nrow(coords),
+    " raster cells and ",
+    nrow(sampling_loc_coords),
+    " empirical sites.",
+    quiet = quiet
+  )
   cell_distances <- popmaps_cell_site_distances(coords, sampling_loc_coords)
   empirical_distances <- popmaps_empirical_site_distances(sampling_loc_coords)
   hard_boundaries <- max.col(ancestry, ties.method = "first")
@@ -23,6 +32,7 @@ popmaps_geographic_surface <- function(raster_surface,
   result <- matrix(NA_real_, nrow = nrow(coords), ncol = num_axes + 2)
 
   for (cell_idx in seq_len(nrow(coords))) {
+    popmaps_progress_message(cell_idx, nrow(coords), "Estimated ancestry for raster cell", quiet = quiet)
     if (is.na(raster_values[cell_idx])) {
       next
     }

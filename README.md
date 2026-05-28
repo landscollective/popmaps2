@@ -117,6 +117,30 @@ Optional legacy functions use optional packages:
 
 `rgeos` is retired from CRAN and is not a dependency.
 
+## Start Here
+
+The fastest way to learn the package is to run the bundled complete workflow:
+
+```r
+library(popmaps2)
+
+start_here <- system.file("examples", "start-here.R", package = "popmaps2")
+source(start_here)
+```
+
+That script uses the small bundled `hija_*` example data to:
+
+- tune a small geographic-distance parameter grid with `tune_popmaps()`;
+- run `popmaps()` with the selected parameters;
+- convert the result to a named `terra::SpatRaster`;
+- write GeoTIFF layers with `write_popmaps()`;
+- write a manuscript-style PNG map with `write_popmaps_plot()`.
+
+For your own data, keep the same workflow shape: validate inputs first, tune a
+biologically plausible grid, inspect the uncertainty and tuning diagnostics,
+then produce final maps. Use `quiet = FALSE` in `popmaps()` or
+`tune_popmaps()` when you want progress messages during longer runs.
+
 ## Input Data
 
 ### Raster Surface
@@ -163,6 +187,12 @@ for new analyses.
 
 Column names may be descriptive, such as `site`, `lon`, `lat`, `axis1`,
 `axis2`, and `axis3`, as long as the column order is correct.
+
+Before modeling starts, `popmaps2` now checks that site names are present and
+unique, coordinate and ancestry columns are numeric, ancestry coefficients are
+non-negative and probability-like, and empirical coordinates fall inside
+non-`NA` cells of the raster. These checks are intentionally early so users do
+not discover a coordinate, CRS, or formatting problem after a long model run.
 
 Point features can be converted from `sf`:
 

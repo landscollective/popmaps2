@@ -17,6 +17,7 @@ popmaps_prepare_inputs <- function(input_raster,
 
   raster_input <- popmaps_prepare_raster(input_raster)
   locations <- popmaps_prepare_locations(input_locs)
+  popmaps_validate_locations_on_raster(raster_input$rast, locations)
 
   popmaps_validate_model_args(
     locations = locations,
@@ -90,6 +91,27 @@ popmaps_prepare_locations <- function(input_locs) {
 
   names(locations) <- paste0("V", seq_len(ncol(locations)))
 
+  locations$V1 <- as.character(locations$V1)
+  empty_site <- is.na(locations$V1) | trimws(locations$V1) == ""
+  if (any(empty_site)) {
+    rows <- which(empty_site)
+    stop(
+      "`input_locs` site names cannot be missing or blank. Check row(s): ",
+      popmaps_collapse_examples(rows),
+      ".",
+      call. = FALSE
+    )
+  }
+  duplicated_site <- duplicated(locations$V1)
+  if (any(duplicated_site)) {
+    stop(
+      "`input_locs` site names must be unique. Duplicate site name(s): ",
+      popmaps_collapse_examples(unique(locations$V1[duplicated_site])),
+      ".",
+      call. = FALSE
+    )
+  }
+
   locations$V2 <- popmaps_numeric_column(locations$V2, "`input_locs` column 2 (longitude)")
   locations$V3 <- popmaps_numeric_column(locations$V3, "`input_locs` column 3 (latitude)")
 
@@ -114,7 +136,82 @@ popmaps_prepare_locations <- function(input_locs) {
     stop("`input_locs` ancestry coefficients must be non-negative.", call. = FALSE)
   }
 
+  popmaps_validate_ancestry_matrix(ancestry, locations)
+
   locations
+}
+
+popmaps_validate_ancestry_matrix <- function(ancestry,
+                                             locations,
+                                             sum_tolerance = 0.01,
+                                             max_tolerance = 0.01) {
+  if (any(ancestry > 1 + max_tolerance)) {
+    bad <- which(ancestry > 1 + max_tolerance, arr.ind = TRUE)
+    rows <- unique(bad[, "row"])
+    stop(
+      "`input_locs` ancestry coefficients should be probabilities between 0 and 1. ",
+      "Values greater than 1 occur at: ",
+      popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
+      ". If these are not ancestry probabilities, transform them before using `popmaps2`.",
+      call. = FALSE
+    )
+  }
+
+  row_sums <- rowSums(ancestry)
+  if (any(row_sums <= 0)) {
+    rows <- which(row_sums <= 0)
+    stop(
+      "Each `input_locs` row must have ancestry coefficients that sum to a positive value. ",
+      "Problem row(s): ",
+      popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  off_sum <- abs(row_sums - 1) > sum_tolerance
+  if (any(off_sum)) {
+    rows <- which(off_sum)
+    warning(
+      "`input_locs` ancestry coefficients usually should sum to 1 for each site. ",
+      "The following row(s) differ by more than ", sum_tolerance, ": ",
+      popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
+      ". Results will use the values as supplied.",
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
+popmaps_validate_locations_on_raster <- function(rast, locations) {
+  coords <- as.matrix(locations[, 2:3, drop = FALSE])
+  cells <- terra::cellFromXY(rast, coords)
+
+  outside <- is.na(cells)
+  if (any(outside)) {
+    rows <- which(outside)
+    stop(
+      "Some empirical coordinates fall outside the raster extent: ",
+      popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
+      ". Check coordinate columns, coordinate reference systems, and raster extent before modeling.",
+      call. = FALSE
+    )
+  }
+
+  raster_values <- terra::values(rast, mat = FALSE)[cells]
+  missing_cell <- is.na(raster_values)
+  if (any(missing_cell)) {
+    rows <- which(missing_cell)
+    stop(
+      "Some empirical coordinates fall on `NA` raster cells: ",
+      popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
+      ". Fill those raster cells, adjust the raster mask, or verify the sample coordinates before modeling.",
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
 }
 
 popmaps_numeric_column <- function(x, label) {
