@@ -1,4 +1,8 @@
-# popmaps2 0.0.0.9000
+# popmaps2 0.1.0
+
+- Prepared the first public alpha release of `popmaps2`. The package is
+  installable, tested, documented, and suitable for validation work, but the API
+  may still change before CRAN submission and the software manuscript.
 
 - Seeded package from the USGS POPMAPS 1.03 release.
 - Renamed the package to `popmaps2`.

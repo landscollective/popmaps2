@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest a workflow, input type, output, or documentation improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would this help you do?
+      description: Describe the scientific or management workflow this would support.
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Suggested approach
+      description: Share any proposed behavior, inputs, outputs, or examples.
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Best fit
+      options:
+        - Core ancestry interpolation
+        - Parameter tuning
+        - Candidate-surface comparison
+        - Visualization
+        - Input conversion
+        - Local validation/reporting
+        - Documentation
+        - Unsure
+    validations:
+      required: true

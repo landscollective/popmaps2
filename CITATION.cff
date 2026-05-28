@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use popmaps2, cite the methods paper and the software version you used."
+type: software
+title: "popmaps2: Population Management using Ancestry Probability Surfaces"
+version: "0.1.0"
+date-released: "2026-05-28"
+license: "CC0-1.0"
+repository-code: "https://github.com/landscollective/popmaps2"
+url: "https://landscollective.github.io/popmaps2/"
+abstract: "An alpha-stage R package for estimating and validating ancestry probability surfaces from empirical ancestry estimates and user-defined geospatial surfaces."
+authors:
+  - family-names: Massatti
+    given-names: Rob
+    email: rob@landscollective.org
+    orcid: "https://orcid.org/0000-0001-5854-5597"
+  - family-names: Winkler
+    given-names: Daniel E.
+preferred-citation:
+  type: article
+  title: "Spatially explicit management of genetic diversity using ancestry probability surfaces"
+  authors:
+    - family-names: Massatti
+      given-names: Rob
+    - family-names: Winkler
+      given-names: Daniel E.
+  journal: "Methods in Ecology and Evolution"
+  year: 2022
+  volume: 13
+  start: 2668
+  end: 2681
+  doi: "10.1111/2041-210X.13902"

@@ -3,8 +3,8 @@
     "name": "popmaps2",
     "organization": "Lands Collective",
     "description": "Maintained successor to POPMAPS for estimating ancestry probability surfaces from empirical genetic data",
-    "version": "0.0.0.9000",
-    "status": "Development",
+    "version": "0.1.0",
+    "status": "Alpha",
     "permissions": {
       "usageType": "openSource",
       "licenses": [
@@ -14,7 +14,7 @@
         }
       ]
     },
-    "homepageURL": "https://github.com/landscollective/popmaps2",
+    "homepageURL": "https://landscollective.github.io/popmaps2/",
     "repositoryURL": "https://github.com/landscollective/popmaps2.git",
     "vcs": "git",
     "tags": [
@@ -34,7 +34,7 @@
       "email": "rob@landscollective.org"
     },
     "date": {
-      "metadataLastUpdated": "2026-05-19"
+      "metadataLastUpdated": "2026-05-28"
     },
     "relatedCode": [
       {

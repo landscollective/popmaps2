@@ -1,6 +1,6 @@
 Package: popmaps2
 Title: Estimate and Modernize Ancestry Probability Surfaces
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     c(
         person(given = "Rob",
@@ -19,11 +19,12 @@ Author: Rob Massatti [aut, cre, cph],
     Daniel E. Winkler [ctb],
     U.S. Geological Survey [cph]
 Maintainer: Rob Massatti <rob@landscollective.org>
-Description: A maintained successor to POPMAPS for estimating ancestry
+Description: An alpha-stage maintained successor to POPMAPS for estimating ancestry
     coefficients and ancestry probability surfaces from empirical genetic data
-    across user-defined geospatial layers. The current development version
-    preserves the POPMAPS 1.03 workflow while package infrastructure,
-    documentation, tests, and spatial-performance improvements are added.
+    across user-defined geospatial layers. The package preserves the POPMAPS
+    1.03 workflow while adding package infrastructure, documentation, tests,
+    spatial-performance improvements, parameter tuning, candidate-surface
+    comparison, and modern map outputs.
 URL: https://landscollective.github.io/popmaps2,
     https://github.com/landscollective/popmaps2
 BugReports: https://github.com/landscollective/popmaps2/issues

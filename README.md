@@ -5,9 +5,13 @@ using Ancestry Probability Surfaces**. It estimates spatially explicit ancestry
 coefficients and ancestry probability surfaces from empirical ancestry estimates
 and user-defined geospatial surfaces.
 
-The package is in development alpha. It is installable, tested, and usable for
-current validation work, but it is not on CRAN yet and the public release API may
-still change before the first tagged release.
+The package is in public alpha. It is installable, tested, documented, and
+usable for validation work, but it is not on CRAN yet and the public API may
+still change before the software manuscript and CRAN submission.
+
+Use tagged releases when reproducibility matters. The `main` branch may move
+quickly while empirical validation, performance work, and figure workflows are
+still being refined.
 
 ## Scientific Goal
 
@@ -57,6 +61,22 @@ optimize resistance surfaces, or run circuit-theory models.
 
 Those tools are expected to run upstream. Their outputs can then be supplied to
 `popmaps2` as empirical ancestry tables or candidate spatial surfaces.
+
+## Known Limitations
+
+The current public alpha is appropriate for package validation and method
+development, but users should keep these limits in mind:
+
+- formal empirical validation across additional species and candidate surfaces
+  is still ongoing;
+- expensive least-cost calculations can still be slow on large, fine-resolution
+  rasters;
+- Windows checks are not yet part of the routine GitHub Actions gate;
+- `jackknife(surface = "C")` remains a legacy compatibility path that still uses
+  optional `gdistance`;
+- management decisions should be based on biological interpretation, validation
+  results, uncertainty, and local expertise rather than a single automated
+  "best" model.
 
 ## Installation
 
@@ -399,6 +419,8 @@ compatibility and should not be the starting point for new figures.
 
 The `tools/` scripts are for local validation, benchmarking, and empirical
 example summaries. They are intentionally not run by routine package checks.
+External empirical data should stay outside the package repository unless they
+are small, public, and intentionally documented.
 
 All scripts load shared resource settings from `tools/popmaps-script-utils.R`.
 They use a conservative fraction of detected logical processors and avoid
@@ -596,12 +618,14 @@ Near-term priorities are:
 2. benchmark and cache expensive distance calculations for larger rasters;
 3. extend modern map outputs with optional vector overlays, insets, and
    validation-summary callouts;
-4. publish the pkgdown site after the active documentation PR merges;
-5. prepare the first tagged development release.
+4. add Windows and optional macOS release checks before CRAN submission;
+5. draft the software manuscript with validation, benchmark, and reproducibility
+   notes.
 
 ## Citation
 
-If you use `popmaps2`, cite the methods paper and the software version you used.
+If you use `popmaps2`, cite the methods paper and the software version or commit
+you used. GitHub also reads `CITATION.cff` for software-citation metadata.
 
 ```bibtex
 @article{Massatti2022AncestryProbabilitySurfaces,

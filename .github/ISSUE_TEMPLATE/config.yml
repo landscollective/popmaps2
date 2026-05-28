@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Methods paper
+    url: https://doi.org/10.1111/2041-210X.13902
+    about: Read the original POPMAPS methods paper.
+  - name: Package website
+    url: https://landscollective.github.io/popmaps2/
+    about: Read installation, function, and workflow documentation.
