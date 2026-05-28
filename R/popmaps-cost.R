@@ -9,7 +9,8 @@ popmaps_cost_surface <- function(raster_surface,
                                  surface_values,
                                  rescale_conductance,
                                  resistance_epsilon,
-                                 legacy_compat = FALSE) {
+                                 legacy_compat = FALSE,
+                                 quiet = TRUE) {
   nrows <- raster_surface@nrows
   ncols <- raster_surface@ncols
 
@@ -21,6 +22,7 @@ popmaps_cost_surface <- function(raster_surface,
   raster_values <- raster::extract(raster_surface, coords)
   geographic_cell_distances <- popmaps_cell_site_distances(coords, sampling_loc_coords)
 
+  popmaps_inform("Preparing conductance surface and graph.", quiet = quiet)
   surface_object <- prepare_popmaps_surface(
     input_raster = raster_surface,
     surface = "C",
@@ -30,6 +32,7 @@ popmaps_cost_surface <- function(raster_surface,
   )
   graph <- popmaps_cost_distance_graph(surface_object, directions = 8)
 
+  popmaps_inform("Calculating least-cost distances among empirical sites.", quiet = quiet)
   empirical_distances <- tryCatch(
     popmaps_cost_distance_matrix(
       surface = surface_object,
@@ -45,6 +48,7 @@ popmaps_cost_surface <- function(raster_surface,
       )
     }
   )
+  popmaps_inform("Calculating least-cost distances from empirical sites to raster cells.", quiet = quiet)
   cell_distance_lookup <- tryCatch(
     popmaps_cost_distance_to_cells(
       surface = surface_object,
@@ -74,6 +78,7 @@ popmaps_cost_surface <- function(raster_surface,
   result <- matrix(NA_real_, nrow = nrow(coords), ncol = num_axes + 2)
 
   for (cell_idx in seq_len(nrow(coords))) {
+    popmaps_progress_message(cell_idx, nrow(coords), "Estimated ancestry for raster cell", quiet = quiet)
     if (is.na(raster_values[cell_idx])) {
       next
     }

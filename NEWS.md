@@ -5,6 +5,9 @@
   may still change before CRAN submission and the software manuscript.
 - Added a manual full-platform R-CMD-check workflow for release-readiness checks
   across Ubuntu, macOS, Windows, and R-devel.
+- Added a bundled start-here example script, early coordinate/raster/ancestry
+  validation, clearer input errors, and optional progress messages for
+  `popmaps()` and `tune_popmaps()`.
 
 - Seeded package from the USGS POPMAPS 1.03 release.
 - Renamed the package to `popmaps2`.

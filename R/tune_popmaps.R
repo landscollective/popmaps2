@@ -103,6 +103,7 @@ tune_popmaps <- function(input_raster = "",
   surface_values <- match.arg(surface_values)
   validation <- match.arg(validation)
   primary_metric <- match.arg(primary_metric)
+  popmaps_check_quiet(quiet)
 
   if (!is.function(dist_prob_func)) {
     stop("`dist_prob_func` must be a function.", call. = FALSE)
@@ -846,6 +847,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
                                          call,
                                          class = "popmaps_tuning",
                                          search = NULL) {
+  popmaps_check_quiet(quiet)
   if (inherits(input_raster, "popmaps_surface")) {
     surface_object <- input_raster
     if (!identical(surface_object$surface, surface)) {
@@ -857,6 +859,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
     prepare_raster <- input_raster
   }
 
+  popmaps_inform("Validating tuning inputs and parameter grid.", quiet = quiet)
   prepared <- popmaps_prepare_inputs(
     input_raster = prepare_raster,
     input_locs = input_locs,
@@ -882,6 +885,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
     resistance_epsilon = resistance_epsilon
   )
   axis_count <- ncol(locations) - 3
+  popmaps_inform("Preparing validation folds.", quiet = quiet)
   validation_folds <- popmaps_make_validation_folds(
     locations = locations,
     validation = validation,
@@ -898,6 +902,7 @@ popmaps_evaluate_tuning_grid <- function(input_raster,
   fold_idx <- 1
 
   for (combo_idx in seq_len(nrow(parameter_grid))) {
+    popmaps_progress_message(combo_idx, nrow(parameter_grid), "Evaluating parameter combination", quiet = quiet)
     combo <- parameter_grid[combo_idx, ]
 
     for (validation_fold in validation_folds) {

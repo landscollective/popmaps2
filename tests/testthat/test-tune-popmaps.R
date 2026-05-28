@@ -34,6 +34,31 @@ test_that("tune_popmaps returns parameter summaries and fold diagnostics", {
   )
 })
 
+test_that("tune_popmaps can report validation progress", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+  messages <- character()
+
+  tuning <- withCallingHandlers(
+    tune_popmaps(
+      input_raster = ex_raster,
+      input_locs = hija_struc,
+      empirical_pt_dist = 0,
+      num_sites = 5,
+      num_tested = 2,
+      popmod = c(-0.01, -0.05),
+      quiet = FALSE
+    ),
+    message = function(msg) {
+      messages <<- c(messages, conditionMessage(msg))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_s3_class(tuning, "popmaps_tuning")
+  expect_true(any(grepl("Validating tuning inputs", messages)))
+  expect_true(any(grepl("Evaluating parameter combination", messages)))
+})
+
 test_that("tune_popmaps validates unsupported and impossible tuning requests", {
   ex_raster <- raster::aggregate(hija_raster, fact = 240)
 

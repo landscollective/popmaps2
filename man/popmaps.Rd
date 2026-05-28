@@ -20,7 +20,8 @@ popmaps(
   surface_values = c("suitability", "conductance", "resistance"),
   rescale_conductance = FALSE,
   resistance_epsilon = sqrt(.Machine$double.eps),
-  legacy_compat = FALSE
+  legacy_compat = FALSE,
+  quiet = TRUE
 )
 }
 \arguments{
@@ -89,6 +90,9 @@ before inversion when \code{surface_values = "resistance"}.}
 indexing behavior for validation and historical comparisons. The default
 \code{FALSE} uses actual raster cell centers and selects \code{surface = "C"}
 candidate sites by least-cost distance.}
+
+\item{quiet}{Logical. If \code{FALSE}, print progress messages for input
+validation, distance preparation, and raster-cell prediction.}
 }
 \description{
 This function estimates an ancestry probability surface when supplied
