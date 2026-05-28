@@ -1,0 +1,48 @@
+name: Bug report
+description: Report an installation, runtime, output, or documentation problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please include enough detail to reproduce it with public or shareable data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the behavior you saw and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproducible example
+      description: Include code, a small public dataset, or a reduced example when possible.
+      render: r
+    validations:
+      required: false
+  - type: textarea
+    id: session
+    attributes:
+      label: R session info
+      description: Paste `sessionInfo()` or `sessioninfo::session_info()` output.
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Installation
+        - popmaps()
+        - Parameter tuning
+        - Surface comparison
+        - Visualization
+        - Local validation scripts
+        - Documentation
+        - Other
+    validations:
+      required: true

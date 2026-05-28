@@ -45,9 +45,9 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 
 ## Release Readiness
 
-- Pass `R CMD check` on macOS, Linux, and Windows.
-- Build a `pkgdown` site.
-- Add lifecycle badges and a changelog.
-- Create a tagged GitHub release.
-- Publish package documentation on the Lands Collective website.
-- Draft software release manuscript with benchmarks and reproducibility notes.
+- Public alpha release: installable package, README, vignettes, pkgdown
+  workflow, issue templates, citation metadata, and Linux/macOS local checks.
+- Before CRAN: add routine Windows checks, broaden empirical validation, freeze
+  the user-facing API, and review package examples for runtime.
+- Before software manuscript: finish benchmark summaries, formal validation
+  examples, figure workflows, and reproducibility notes.
