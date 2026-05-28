@@ -47,7 +47,8 @@ This file tracks the practical path from the POPMAPS 1.03 baseline to a public `
 
 - Public alpha release: installable package, README, vignettes, pkgdown
   workflow, issue templates, citation metadata, and Linux/macOS local checks.
-- Before CRAN: add routine Windows checks, broaden empirical validation, freeze
-  the user-facing API, and review package examples for runtime.
+- Before CRAN: use the full-platform check workflow before releases, broaden
+  empirical validation, freeze the user-facing API, and review package examples
+  for runtime.
 - Before software manuscript: finish benchmark summaries, formal validation
   examples, figure workflows, and reproducibility notes.

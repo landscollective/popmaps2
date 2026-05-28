@@ -3,6 +3,8 @@
 - Prepared the first public alpha release of `popmaps2`. The package is
   installable, tested, documented, and suitable for validation work, but the API
   may still change before CRAN submission and the software manuscript.
+- Added a manual full-platform R-CMD-check workflow for release-readiness checks
+  across Ubuntu, macOS, Windows, and R-devel.
 
 - Seeded package from the USGS POPMAPS 1.03 release.
 - Renamed the package to `popmaps2`.

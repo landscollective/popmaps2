@@ -545,11 +545,14 @@ The repository uses two workflows:
 | Workflow | Trigger | Purpose |
 | --- | --- | --- |
 | `R-CMD-check` | Pull requests to `main`, plus manual dispatch | Run Linux package checks. macOS checks are manual-only. |
+| `Full platform R-CMD-check` | Manual dispatch only | Run a release-readiness matrix across Ubuntu release, Ubuntu devel, macOS release, and Windows release for a selected branch, tag, or commit. |
 | `pkgdown` | Manual dispatch only | Build and deploy the documentation site to GitHub Pages. |
 
 Routine `R-CMD-check` does not run again on the post-merge push to `main`.
 Pull-request checks are the default quality gate, and workflow concurrency
 cancels older runs on the same PR or branch.
+Run the full-platform workflow before public releases or after changes that may
+behave differently across operating systems.
 
 ## Exported Functions
 

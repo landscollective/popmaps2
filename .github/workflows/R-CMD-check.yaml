@@ -8,7 +8,7 @@ name: R-CMD-check
     branches: [main]
     paths:
       - ".Rbuildignore"
-      - ".github/workflows/R-CMD-check.yaml"
+      - ".github/workflows/**"
       - "DESCRIPTION"
       - "NAMESPACE"
       - "R/**"
