@@ -87,7 +87,7 @@ install.packages("remotes")
 remotes::install_github("landscollective/popmaps2")
 ```
 
-To install source vignettes so `vignette("surface-comparison",
+To install source vignettes so `vignette("quick-start",
 package = "popmaps2")` works from the installed package, build vignettes during
 installation:
 
@@ -128,55 +128,23 @@ start_here <- system.file("examples", "start-here.R", package = "popmaps2")
 source(start_here)
 ```
 
-That script uses the small bundled `hija_*` example data to:
+That script tunes a small grid, runs `popmaps()`, writes GeoTIFF layers, and
+writes a manuscript-style PNG map using the bundled `hija_*` example data.
 
-- tune a small geographic-distance parameter grid with `tune_popmaps()`;
-- run `popmaps()` with the selected parameters;
-- convert the result to a named `terra::SpatRaster`;
-- write GeoTIFF layers with `write_popmaps()`;
-- write a manuscript-style PNG map with `write_popmaps_plot()`.
+For a narrated version of the same workflow, install vignettes and open:
 
-For your own data, keep the same workflow shape: validate inputs first, tune a
-biologically plausible grid, inspect the uncertainty and tuning diagnostics,
-then produce final maps. Use `quiet = FALSE` in `popmaps()` or
-`tune_popmaps()` when you want progress messages during longer runs.
+```r
+vignette("quick-start", package = "popmaps2")
+```
 
 ## Input Data
 
-### Raster Surface
+`input_raster` defines the interpolation grid. It may be a `terra::SpatRaster`,
+a legacy `raster::RasterLayer`, or a file path readable by `terra::rast()`.
+Raster values are ignored for `surface = "G"` and used as suitability,
+conductance, or resistance values for `surface = "C"`.
 
-`input_raster` defines the interpolation grid. It may be a
-`terra::SpatRaster`, a legacy `raster::RasterLayer`, or a file path readable by
-`terra::rast()`.
-
-Raster values are interpreted according to `surface`:
-
-| Setting | Meaning |
-| --- | --- |
-| `surface = "G"` | Geographic interpolation. Raster values are ignored for distances; the raster only supplies geometry and optional prediction masking. |
-| `surface = "C"` | Conductance or cost-distance interpolation. Raster values affect movement or gene-flow distance across the landscape. |
-
-For `surface = "C"`, declare the meaning of raster values with
-`surface_values`:
-
-| `surface_values` | Meaning |
-| --- | --- |
-| `"suitability"` | Higher values mean easier movement or stronger support. |
-| `"conductance"` | Higher values mean easier movement. |
-| `"resistance"` | Higher values mean harder movement; values are inverted internally to conductance. |
-
-`threshold` is a prediction mask. It skips cells where ancestry should not be
-estimated, but it is not treated as a movement barrier.
-
-By default, `popmaps()` estimates every output cell at the actual raster cell
-center returned by the raster geometry. Set `legacy_compat = TRUE` only when you
-need to reproduce POPMAPS 1.03 output exactly for historical comparison. That
-legacy mode preserves an old raster-indexing workaround and should not be used
-for new analyses.
-
-### Empirical Ancestry Locations
-
-`input_locs` must contain:
+`input_locs` is an empirical ancestry table with this column order:
 
 | Column | Meaning |
 | --- | --- |
@@ -185,14 +153,11 @@ for new analyses.
 | 3 | Latitude or y-coordinate |
 | 4...n | Ancestry coefficients for each ancestry axis or cluster |
 
-Column names may be descriptive, such as `site`, `lon`, `lat`, `axis1`,
-`axis2`, and `axis3`, as long as the column order is correct.
-
-Before modeling starts, `popmaps2` now checks that site names are present and
+Column names may be descriptive as long as the order is correct. Before
+modeling starts, `popmaps2` checks that site names are present and
 unique, coordinate and ancestry columns are numeric, ancestry coefficients are
 non-negative and probability-like, and empirical coordinates fall inside
-non-`NA` cells of the raster. These checks are intentionally early so users do
-not discover a coordinate, CRS, or formatting problem after a long model run.
+non-`NA` cells of the raster.
 
 Point features can be converted from `sf`:
 
@@ -204,228 +169,7 @@ input_locs <- locs_from_sf(
 )
 ```
 
-### Candidate Surface Helpers
-
-Prepare candidate surfaces explicitly:
-
-```r
-geographic <- prepare_popmaps_surface(hija_raster, surface = "G")
-
-sdm_suitability <- prepare_popmaps_surface(
-  input_raster = hija_raster,
-  surface = "C",
-  surface_values = "suitability"
-)
-
-resistance <- prepare_popmaps_surface(
-  input_raster = hija_raster,
-  surface = "C",
-  surface_values = "resistance"
-)
-```
-
-Use converters when inputs are not already single candidate rasters:
-
-```r
-point_grid <- surface_from_points(hija_struc, resolution = 0.01)
-
-candidate_surfaces <- surfaces_from_raster_stack(
-  input_raster = multi_layer_raster,
-  surface = "C",
-  surface_values = c("suitability", "conductance", "resistance"),
-  include_geographic = TRUE
-)
-
-eems_surface <- surface_from_eems(eems_table, value_col = "migration")
-feems_surface <- surface_from_feems(feems_table, value_col = "w")
-```
-
-`surface_from_points()` defaults to `surface = "G"`. It is mainly a convenience
-for building a geographic/template grid from empirical coordinates. A constant
-`surface = "C"` grid can be created, but biologically meaningful `C` analyses
-should normally come from a supplied suitability, conductance, resistance, EEMS,
-FEEMS, or other landscape surface.
-
-## Basic Workflow
-
-Load the package and example data:
-
-```r
-library(popmaps2)
-
-data(hija_raster)
-data(hija_struc)
-data(hija_herb)
-```
-
-Aggregate the example raster to keep demonstration runs fast:
-
-```r
-ex_raster <- raster::aggregate(hija_raster, fact = 16)
-```
-
-Tune geographic-distance parameters:
-
-```r
-grid <- suggest_tuning_grid(hija_struc)
-
-tuning <- tune_popmaps(
-  input_raster = ex_raster,
-  input_locs = hija_struc,
-  surface = "G",
-  empirical_pt_dist = grid$empirical_pt_dist,
-  num_sites = grid$num_sites,
-  num_tested = grid$num_tested,
-  popmod = grid$popmod,
-  quiet = TRUE
-)
-
-tuning$best
-```
-
-Diagnose how strongly the best parameter combination is supported:
-
-```r
-diagnostics <- diagnose_tuning(tuning)
-
-diagnostics$overview
-diagnostics$parameter_ranges
-```
-
-Use spatial-block validation when the management question involves prediction
-into unsampled areas:
-
-```r
-spatial_tuning <- tune_popmaps(
-  input_raster = ex_raster,
-  input_locs = hija_struc,
-  validation = "spatial_block",
-  n_blocks = 4,
-  spatial_block_repeats = 5,
-  spatial_block_seed = 1,
-  empirical_pt_dist = grid$empirical_pt_dist,
-  num_sites = grid$num_sites,
-  num_tested = grid$num_tested,
-  popmod = grid$popmod,
-  quiet = TRUE
-)
-
-spatial_tuning$best
-```
-
-Compare candidate geographic and landscape surfaces with matched validation:
-
-```r
-candidate_surfaces <- list(
-  geographic = prepare_popmaps_surface(ex_raster, surface = "G"),
-  suitability = prepare_popmaps_surface(
-    ex_raster,
-    surface = "C",
-    surface_values = "suitability"
-  )
-)
-
-surface_comparison <- compare_popmaps_surfaces(
-  input_locs = hija_struc,
-  surfaces = candidate_surfaces,
-  validation = "spatial_block",
-  spatial_block_repeats = 5,
-  quiet = TRUE
-)
-
-surface_comparison$summary
-surface_comparison$support
-```
-
-Write a surface-comparison report:
-
-```r
-report <- write_surface_comparison_report(
-  surface_comparison,
-  dir = "surface-comparison-report",
-  prefix = "hija-surfaces"
-)
-
-report$report
-```
-
-Estimate an ancestry probability surface:
-
-```r
-aps <- popmaps(
-  input_raster = ex_raster,
-  input_locs = hija_struc,
-  surface = "G",
-  empirical_pt_dist = 5,
-  num_sites = 15,
-  num_tested = 4,
-  popmod = -0.05,
-  threshold = 0
-)
-```
-
-For `surface = "C"`, `popmaps2` selects candidate empirical sites by least-cost
-distance over the supplied surface. In `legacy_compat = TRUE` mode only, it
-reproduces the POPMAPS 1.03 shortcut that first narrowed the candidate pool by
-geographic distance before ordering candidates by least-cost distance.
-
-Convert output to a raster and write GeoTIFFs:
-
-```r
-aps_raster <- popmaps_rast(aps, ex_raster)
-
-write_popmaps(
-  pop_raster_list = aps,
-  input_raster = ex_raster,
-  dir = "outputs",
-  prefix = "hija",
-  overwrite = TRUE
-)
-```
-
-Draw modern map outputs or write a PNG directly:
-
-```r
-plot_popmaps(
-  pop_raster_list = aps,
-  input_raster = ex_raster,
-  input_locs = hija_struc,
-  type = "ancestry"
-)
-
-write_popmaps_plot(
-  pop_raster_list = aps,
-  input_raster = ex_raster,
-  path = "outputs/hija-ancestry-map.png",
-  input_locs = hija_struc,
-  type = "ancestry",
-  overwrite = TRUE
-)
-```
-
-Use the manuscript-style preset when you want maps that more closely follow
-the Massatti and Winkler (2022) figure style:
-
-```r
-write_popmaps_plot(
-  pop_raster_list = aps,
-  input_raster = ex_raster,
-  path = "outputs/hija-manuscript-style-map.png",
-  input_locs = hija_struc,
-  type = "ancestry",
-  style = "manuscript",
-  background_threshold = 0.1015,
-  overwrite = TRUE
-)
-```
-
-Run the built-in POPMAPS 1.03 baseline validation:
-
-```r
-validate_popmaps_baseline()
-```
-
-## Output Structure
+## Core Workflow
 
 `popmaps()` currently returns the original POPMAPS list structure:
 
@@ -435,113 +179,25 @@ validate_popmaps_baseline()
 | `[[2]]` | Ancestry probability matrix |
 | `[[3]]...[[n]]` | Estimated ancestry coefficient matrices for each ancestry axis |
 
-The ancestry-axis matrices are weighted ancestry estimates following the
-published POPMAPS equation. They are not forced to sum to one at every cell
-because the distance-decay weights also carry information about confidence and
-distance from empirical data.
-
 Use `popmaps_rast()` and `write_popmaps()` for GeoTIFF conversion and export.
-Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures. The
-older `popmap_viz()` function is retained only for POPMAPS 1.03 plotting
-compatibility and should not be the starting point for new figures.
+Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures.
+The older `popmap_viz()` function is retained only for POPMAPS 1.03 plotting
+compatibility.
 
-## Local Validation Scripts
+The main workflow steps are:
 
-The `tools/` scripts are for local validation, benchmarking, and empirical
-example summaries. They are intentionally not run by routine package checks.
-External empirical data should stay outside the package repository unless they
-are small, public, and intentionally documented.
-
-All scripts load shared resource settings from `tools/popmaps-script-utils.R`.
-They use a conservative fraction of detected logical processors and avoid
-package-level `doParallel`, `foreach`, or `parallel` dependencies.
-
-Shared resource environment variables:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `POPMAPS_THREADS` | auto | Number of logical processors requested for threaded system libraries. Use `all` for every detected processor. |
-| `POPMAPS_THREAD_FRACTION` | `0.75` | Fraction of detected processors used when `POPMAPS_THREADS` is unset. |
-| `POPMAPS_TERRA_MEMFRAC` | `0.70` | Fraction of memory `terra` may use before writing temporary files. |
-| `POPMAPS_TMPDIR` | R session tempdir | Directory for temporary raster files and intermediate outputs. |
-
-Script-specific thread variables such as `POPMAPS_ASLO_THREADS`,
-`POPMAPS_SURFACE_THREADS`, `POPMAPS_EXAMPLE_THREADS`, and
-`POPMAPS_TUNING_THREADS` override `POPMAPS_THREADS`.
-
-### Bundled Surface Example
-
-```sh
-Rscript tools/example-surface-comparison.R
-```
-
-Uses bundled `hija_*` data, creates a point-derived geographic surface, compares
-it with the bundled SDM suitability raster, and writes a report under
-`local_validation/example_surface_comparison`.
-
-### ASLO Validation
-
-```sh
-Rscript tools/validate-aslo-local.R \
-  /path/to/aslo_avg.asc \
-  /path/to/aslo.txt \
-  /tmp/popmaps2-aslo-validation
-```
-
-Common controls:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `POPMAPS_ASLO_AGGREGATE` | `1` | Aggregate the input raster before modeling. |
-| `POPMAPS_ASLO_SURFACE` | `G` | Run geographic or conductance/cost interpolation. |
-| `POPMAPS_ASLO_NUM_SITES` | `15` | Set `num_sites`. |
-| `POPMAPS_ASLO_NUM_TESTED` | `4` | Set `num_tested`. |
-| `POPMAPS_ASLO_POPMOD` | `-0.05` | Set `popmod`. |
-| `POPMAPS_ASLO_WRITE_RASTERS` | `false` | Write GeoTIFF output layers. |
-| `POPMAPS_ASLO_SAVE_RDS` | `false` | Save the full result object for debugging. |
-
-### Empirical Tuning Examples
-
-```sh
-Rscript tools/validate-example-tuning.R ../popmaps_test_data
-Rscript tools/summarize-example-tuning.R ../popmaps_test_data/tuning_outputs
-```
-
-The first script runs tuning across local `*_avg.asc` and matching `*.txt`
-files. The second script summarizes the latest tuning outputs into CSVs,
-figures, and `empirical-tuning-report.md`.
-
-### Empirical Surface Comparison
-
-```sh
-POPMAPS_SURFACE_AGGREGATE=8 \
-POPMAPS_SURFACE_VALIDATION=spatial_block \
-POPMAPS_SURFACE_BLOCK_REPEATS=2 \
-Rscript tools/compare-example-surfaces.R ../popmaps_test_data
-```
-
-This compares a geographic `G` surface against an SDM suitability `C` surface
-for each local empirical example. Set
-`POPMAPS_SURFACE_INCLUDE_INVERSE=true` to also treat the SDM raster as
-resistance for a diagnostic inverse-surface comparison.
-
-### ASLO Benchmarking
-
-```sh
-Rscript tools/benchmark-aslo-local.R \
-  /path/to/aslo_avg.asc \
-  /path/to/aslo.txt \
-  /tmp/popmaps2-aslo-benchmark
-```
-
-Set `POPMAPS_BENCH_AGGREGATES=16,4,1` and
-`POPMAPS_BENCH_SURFACES=G,C` to choose raster sizes and interpolation modes.
+1. prepare an empirical ancestry table and raster surface;
+2. tune a biologically plausible parameter grid;
+3. optionally compare candidate `G` and `C` surfaces with matched validation;
+4. run `popmaps()` with the selected parameters and surface;
+5. export rasters, figures, and validation summaries.
 
 ## Documentation
 
 Workflow vignettes are available after installing with `build_vignettes = TRUE`:
 
 ```r
+vignette("quick-start", package = "popmaps2")
 vignette("parameter-tuning", package = "popmaps2")
 vignette("surface-comparison", package = "popmaps2")
 vignette("local-empirical-validation", package = "popmaps2")
@@ -550,10 +206,20 @@ vignette("local-empirical-validation", package = "popmaps2")
 In a repository checkout, the source files are:
 
 ```text
+vignettes/quick-start.Rmd
 vignettes/parameter-tuning.Rmd
 vignettes/surface-comparison.Rmd
 vignettes/local-empirical-validation.Rmd
 ```
+
+The vignettes cover the details that used to make this README too long:
+
+| Vignette | Best for |
+| --- | --- |
+| `quick-start` | First successful run, output files, and map products. |
+| `parameter-tuning` | Tuning grids, spatial-block validation, adaptive tuning, and diagnostics. |
+| `surface-comparison` | Testing geographic, suitability, conductance, resistance, EEMS, and FEEMS surfaces. |
+| `local-empirical-validation` | Running larger private/local empirical examples outside package checks. |
 
 The repository includes `pkgdown` configuration. To build the website locally:
 
@@ -570,7 +236,7 @@ be published without spending Actions minutes on every commit.
 
 ## GitHub Actions
 
-The repository uses two workflows:
+GitHub Actions are intentionally conservative to avoid wasting minutes:
 
 | Workflow | Trigger | Purpose |
 | --- | --- | --- |
@@ -583,38 +249,6 @@ Pull-request checks are the default quality gate, and workflow concurrency
 cancels older runs on the same PR or branch.
 Run the full-platform workflow before public releases or after changes that may
 behave differently across operating systems.
-
-## Exported Functions
-
-| Function | Purpose |
-| --- | --- |
-| `popmaps()` | Estimate hard boundaries, ancestry probabilities, and ancestry coefficients across a raster surface. |
-| `tune_popmaps()` | Tune geographic or least-cost POPMAPS parameters with leave-one-out or spatial-block validation. |
-| `compare_popmaps_surfaces()` | Compare candidate geographic, suitability, conductance, or resistance surfaces with matched validation. |
-| `plot_surface_comparison()` | Plot surface validation scores, support gaps, and selected best parameters. |
-| `write_surface_comparison_report()` | Write surface-comparison CSVs, diagnostic figures, and a Markdown report. |
-| `prepare_popmaps_surface()` | Declare candidate raster semantics before modeling. |
-| `surface_from_points()` | Build a simple geographic/template prediction surface from empirical coordinates. |
-| `locs_from_sf()` | Convert `sf` point features to a POPMAPS location table. |
-| `surfaces_from_raster_stack()` | Convert raster layers to a named candidate-surface list. |
-| `surface_from_eems()` | Convert raster-like or coordinate/value EEMS exports to a conductance surface. |
-| `surface_from_feems()` | Convert raster-like or coordinate/value FEEMS exports to a conductance surface. |
-| `diagnose_tuning()` | Summarize tuning strength, near-best support, and parameter effects. |
-| `suggest_tuning_grid()` | Suggest tuning grids from empirical sampling-site distances. |
-| `suggest_surface_tuning_grid()` | Suggest tuning grids from distances over a specific candidate surface. |
-| `adaptive_tune_popmaps()` | Explore tuning parameter space with random or Latin hypercube sampling and local refinement. |
-| `popmaps_rast()` | Convert `popmaps()` list output to a named `terra::SpatRaster`. |
-| `write_popmaps()` | Write hard boundary, ancestry probability, and ancestry-axis layers as GeoTIFFs. |
-| `plot_popmaps()` | Draw modern ancestry probability, hard-boundary, and ancestry-axis maps. |
-| `write_popmaps_plot()` | Export modern POPMAPS map figures as PNG files. |
-| `anc_extract()` | Extract estimated ancestry coefficients at a coordinate. |
-| `jackknife()` | Legacy leave-one-out parameter testing. |
-| `jackknife_viz()` | Legacy jackknife heatmap visualization. |
-| `popmap_viz()` | Legacy ancestry-surface visualization. |
-| `bg_pop_pts()` | Generate and partition random background points by inferred population. |
-| `ptsNpop()` | Assign provided sample points to inferred populations. |
-| `popmap_pca()` | Build environmental PCA rasters from environmental layers. |
-| `envplot()` | Visualize environmental space by inferred population. |
 
 ## Relationship To Related Software
 

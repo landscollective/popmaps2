@@ -1,0 +1,193 @@
+---
+title: "Quick start"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Quick start}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+This vignette walks through the smallest complete `popmaps2` workflow:
+
+1. prepare empirical ancestry locations and a prediction raster;
+2. tune a small parameter grid;
+3. run POPMAPS with the selected parameters;
+4. convert the output to modern raster objects;
+5. write GeoTIFF layers and a map figure.
+
+The example uses the small bundled *Hesperidanthus jaegeri* data so it can run
+quickly after installation. It is a learning workflow, not a recommended
+analysis scale for a publication or management decision.
+
+## Run The Bundled Script
+
+After installing `popmaps2`, the fastest check is to source the bundled
+start-here script:
+
+```{r run-script}
+library(popmaps2)
+
+start_here <- system.file("examples", "start-here.R", package = "popmaps2")
+source(start_here)
+```
+
+The script writes its outputs to a temporary directory and prints that path at
+the end. For your own project, copy the workflow shape and change the output
+directory to a project folder.
+
+## Load Example Data
+
+The package includes one small empirical example:
+
+```{r load-data}
+library(popmaps2)
+
+data(hija_raster)
+data(hija_struc)
+
+ex_raster <- raster::aggregate(hija_raster, fact = 240)
+input_locs <- hija_struc
+```
+
+`hija_raster` supplies the prediction grid. For `surface = "G"`, raster values
+are ignored for distance calculations; the raster supplies geometry and any
+`NA` prediction mask. For `surface = "C"`, raster values define conductance or
+cost distance across the landscape.
+
+`hija_struc` is an empirical ancestry table. The required column order is:
+
+| Column | Meaning |
+| --- | --- |
+| 1 | Site name |
+| 2 | Longitude or x-coordinate |
+| 3 | Latitude or y-coordinate |
+| 4...n | Ancestry coefficients |
+
+Before modeling starts, `popmaps2` checks for common input problems: blank or
+duplicated site names, non-numeric coordinates, invalid ancestry values, points
+outside the raster extent, and points falling on `NA` raster cells.
+
+## Tune Parameters
+
+Use `tune_popmaps()` to evaluate candidate parameters against withheld empirical
+ancestry estimates. Lower RMSE, MAE, and Hellinger distance are better. Higher
+dominant ancestry accuracy and dominant ancestry probability are better.
+
+```{r tune}
+tuning <- tune_popmaps(
+  input_raster = ex_raster,
+  input_locs = input_locs,
+  surface = "G",
+  empirical_pt_dist = c(0, 5),
+  num_sites = c(5, 8),
+  num_tested = c(2, 3),
+  popmod = c(-0.01, -0.05),
+  threshold = 0,
+  quiet = FALSE
+)
+
+tuning$best
+```
+
+This grid is intentionally tiny. For real analyses, use a biologically
+motivated grid, `suggest_tuning_grid()`, `adaptive_tune_popmaps()`, or the
+surface-specific tools described in the tuning and surface-comparison
+vignettes.
+
+## Run POPMAPS
+
+The best tuning row provides a transparent starting point for a final map run:
+
+```{r run-popmaps}
+best <- tuning$best[1, ]
+
+aps <- popmaps(
+  input_raster = ex_raster,
+  input_locs = input_locs,
+  surface = "G",
+  empirical_pt_dist = best$empirical_pt_dist,
+  num_sites = best$num_sites,
+  num_tested = best$num_tested,
+  popmod = best$popmod,
+  threshold = 0,
+  quiet = FALSE
+)
+```
+
+Use `quiet = FALSE` when you want progress messages during longer runs.
+
+## Export Rasters
+
+`popmaps()` preserves the original POPMAPS list output. Use `popmaps_rast()` for
+modern `terra` workflows and `write_popmaps()` for GeoTIFF output:
+
+```{r export-rasters}
+aps_raster <- popmaps_rast(aps, ex_raster)
+aps_raster
+
+output_dir <- file.path(tempdir(), "popmaps2-quick-start")
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+written_layers <- write_popmaps(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  dir = output_dir,
+  prefix = "hija",
+  overwrite = TRUE
+)
+
+written_layers
+```
+
+The output layers are:
+
+| Layer | Meaning |
+| --- | --- |
+| `boundary` | Hard ancestry assignment |
+| `ancestry_probability` | Confidence in the hard assignment |
+| `axis_*` | Weighted ancestry estimate for each ancestry axis |
+
+## Export A Map Figure
+
+Use `write_popmaps_plot()` for manuscript-style figures:
+
+```{r export-map}
+map_path <- file.path(output_dir, "hija-ancestry-map.png")
+
+write_popmaps_plot(
+  pop_raster_list = aps,
+  input_raster = ex_raster,
+  path = map_path,
+  input_locs = input_locs,
+  style = "manuscript",
+  type = "ancestry",
+  overwrite = TRUE
+)
+
+map_path
+```
+
+Use `type = "boundary"` for hard assignments and `type = "axis"` with `axis = 1`,
+`axis = 2`, and so on for individual ancestry-axis surfaces.
+
+## What To Read Next
+
+Read the other vignettes when the basic workflow runs cleanly:
+
+- `vignette("parameter-tuning", package = "popmaps2")` explains tuning,
+  diagnostics, spatial-block validation, and adaptive search.
+- `vignette("surface-comparison", package = "popmaps2")` explains geographic,
+  suitability, conductance, resistance, EEMS, and FEEMS surface workflows.
+- `vignette("local-empirical-validation", package = "popmaps2")` explains local
+  validation scripts for larger empirical examples that should not live inside
+  the package repository.
