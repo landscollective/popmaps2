@@ -8,6 +8,8 @@
 - Added a bundled start-here example script, early coordinate/raster/ancestry
   validation, clearer input errors, and optional progress messages for
   `popmaps()` and `tune_popmaps()`.
+- Added a quick-start vignette and shortened the README so first-time users can
+  start with the minimal workflow and then move into focused workflow articles.
 
 - Seeded package from the USGS POPMAPS 1.03 release.
 - Renamed the package to `popmaps2`.

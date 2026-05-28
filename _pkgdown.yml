@@ -13,6 +13,7 @@ articles:
 - title: Workflows
   navbar: Workflows
   contents:
+  - quick-start
   - parameter-tuning
   - surface-comparison
   - local-empirical-validation
