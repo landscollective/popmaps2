@@ -149,10 +149,10 @@ popmaps_validate_ancestry_matrix <- function(ancestry,
     bad <- which(ancestry > 1 + max_tolerance, arr.ind = TRUE)
     rows <- unique(bad[, "row"])
     stop(
-      "`input_locs` ancestry coefficients should be probabilities between 0 and 1. ",
+      "`input_locs` ancestry coefficients should be proportions between 0 and 1. ",
       "Values greater than 1 occur at: ",
       popmaps_collapse_examples(vapply(rows, function(idx) popmaps_site_label(locations, idx), character(1))),
-      ". If these are not ancestry probabilities, transform them before using `popmaps2`.",
+      ". If these are not ancestry coefficients or proportions, transform them before using `popmaps2`.",
       call. = FALSE
     )
   }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/popmaps.R
 \name{popmaps}
 \alias{popmaps}
-\title{Estimate an ancestry probability surface}
+\title{Estimate interpolated ancestry and assignment-confidence surfaces}
 \usage{
 popmaps(
   input_raster = "",
@@ -95,9 +95,11 @@ candidate sites by least-cost distance.}
 validation, distance preparation, and raster-cell prediction.}
 }
 \description{
-This function estimates an ancestry probability surface when supplied
-a geospatial layer and empirical genetic data describing patterns of ancestry coefficients
-across sampling locations.
+This function estimates spatially explicit ancestry surfaces
+when supplied a geospatial layer and empirical genetic data describing
+ancestry coefficients across sampling locations. The second output layer
+is a dominant-ancestry confidence score: the rescaled dominance of the
+largest interpolated ancestry component, not a posterior probability.
 }
 \examples{
 \dontrun{

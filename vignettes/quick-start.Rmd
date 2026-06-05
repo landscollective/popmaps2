@@ -81,7 +81,7 @@ outside the raster extent, and points falling on `NA` raster cells.
 
 Use `tune_popmaps()` to evaluate candidate parameters against withheld empirical
 ancestry estimates. Lower RMSE, MAE, and Hellinger distance are better. Higher
-dominant ancestry accuracy and dominant ancestry probability are better.
+dominant ancestry accuracy and dominant-axis support are better.
 
 ```{r tune}
 tuning <- tune_popmaps(
@@ -154,7 +154,7 @@ The output layers are:
 | Layer | Meaning |
 | --- | --- |
 | `boundary` | Hard ancestry assignment |
-| `ancestry_probability` | Confidence in the hard assignment |
+| `dominant_ancestry_confidence` | Dominance-based confidence in the hard assignment |
 | `axis_*` | Weighted ancestry estimate for each ancestry axis |
 
 ## Export A Map Figure
@@ -170,7 +170,7 @@ write_popmaps_plot(
   path = map_path,
   input_locs = input_locs,
   style = "manuscript",
-  type = "ancestry",
+  type = "confidence",
   overwrite = TRUE
 )
 

@@ -74,7 +74,7 @@ write_popmaps_plot(
   path = map_path,
   input_locs = example_locs,
   style = "manuscript",
-  type = "ancestry",
+  type = "confidence",
   overwrite = TRUE
 )
 

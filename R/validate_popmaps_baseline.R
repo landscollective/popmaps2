@@ -1,6 +1,6 @@
 #' Validate against the POPMAPS 1.03 baseline
 #'
-#' @description Runs a small Hilaria jamesii ancestry probability surface and
+#' @description Runs a small Hilaria jamesii spatial ancestry interpolation and
 #' compares the result to a frozen POPMAPS 1.03 reference output bundled with
 #' the package. This is intended as a quick scientific regression check before
 #' deeper optimization work changes the modeling internals. The check runs
@@ -89,7 +89,7 @@ popmaps_compare_output <- function(current, reference, tolerance) {
 
   surface_names <- c(
     "hard_boundary",
-    "ancestry_probability",
+    "dominant_ancestry_confidence",
     paste0("axis_", seq_len(length(current) - 2))
   )
 

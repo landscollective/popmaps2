@@ -49,7 +49,7 @@
 #'}
 "hija_struc"
 #'
-#'@title Geospatial layer for ancestry probability surface estimation
+#'@title Geospatial layer for spatial ancestry interpolation
 #'
 #'@description A raster layer created from a species distribution model (asci file) for 
 #'    Hilaria jamesii (see Massatti & Winkler 2022). 

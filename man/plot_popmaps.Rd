@@ -8,7 +8,7 @@ plot_popmaps(
   pop_raster_list,
   input_raster,
   input_locs = NULL,
-  type = c("ancestry", "boundary", "axis"),
+  type = c("confidence", "boundary", "axis", "ancestry"),
   style = c("modern", "manuscript"),
   axis = 1,
   sites = c("pies", "points", "none"),
@@ -45,13 +45,14 @@ plot_popmaps(
 \item{input_locs}{Optional POPMAPS location table. When supplied, empirical
 sampling locations are drawn as ancestry pies or dominant-ancestry points.}
 
-\item{type}{Map type to draw. \code{"ancestry"} plots the maximum ancestry
-probability layer, \code{"boundary"} plots hard population assignments, and
-\code{"axis"} plots one ancestry-axis probability layer.}
+\item{type}{Map type to draw. \code{"confidence"} plots the dominant ancestry
+confidence layer, \code{"boundary"} plots hard population assignments, and
+\code{"axis"} plots one weighted ancestry-axis layer. \code{"ancestry"} is accepted
+as a legacy alias for \code{"confidence"}.}
 
 \item{style}{Plot style. \code{"modern"} uses the default popmaps2 map style.
 \code{"manuscript"} uses a Massatti and Winkler (2022)-inspired style with
-grayscale probabilities, colored hard-boundary outlines, muted suitability
+grayscale confidence, colored hard-boundary outlines, muted suitability
 background, and state outlines when available.}
 
 \item{axis}{Ancestry axis used when \code{type = "axis"}. Supply either an integer
@@ -77,11 +78,11 @@ boundaries. Named palettes are matched to base R HCL palettes, or a custom
 color vector may be supplied.}
 
 \item{background_raster}{Optional suitability, habitat, or prediction raster
-drawn beneath the POPMAPS probability layer. In \code{style = "manuscript"}, this
+drawn beneath the POPMAPS confidence layer. In \code{style = "manuscript"}, this
 defaults to \code{input_raster}.}
 
 \item{background_threshold}{Optional numeric cutoff. When supplied, ancestry
-probability or axis values are shown only where \code{background_raster} is
+confidence or axis values are shown only where \code{background_raster} is
 greater than or equal to the cutoff; lower cells show only the background.}
 
 \item{background_palette}{Color palette for \code{background_raster}.}

@@ -9,8 +9,9 @@
 #'   `terra::SpatRaster`, a legacy `raster::RasterLayer`, or a path readable by
 #'   `terra::rast()`.
 #' @param layer_names Optional character vector of layer names. By default,
-#'   layers are named `hard_boundary`, `ancestry_probability`, `axis_1`,
-#'   `axis_2`, and so on.
+#'   layers are named `hard_boundary`, `dominant_ancestry_confidence`, `axis_1`,
+#'   `axis_2`, and so on. The confidence layer is the rescaled dominance of the
+#'   largest interpolated ancestry component, not a posterior probability.
 #'
 #' @return A `terra::SpatRaster` with one layer per `popmaps()` output matrix.
 #'
@@ -142,7 +143,7 @@ write_popmaps <- function(pop_raster_list,
 popmaps_output_layer_names <- function(pop_raster_list, layer_names = NULL) {
   default_names <- c(
     "hard_boundary",
-    "ancestry_probability",
+    "dominant_ancestry_confidence",
     paste0("axis_", seq_len(length(pop_raster_list) - 2))
   )
 

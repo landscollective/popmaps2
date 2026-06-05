@@ -1,9 +1,15 @@
 # popmaps2
 
-`popmaps2` is the maintained successor to POPMAPS: **Population Management
-using Ancestry Probability Surfaces**. It estimates spatially explicit ancestry
-coefficients and ancestry probability surfaces from empirical ancestry estimates
-and user-defined geospatial surfaces.
+`popmaps2` is the maintained successor to POPMAPS. It estimates spatially
+explicit ancestry coefficients, hard ancestry assignments, and
+dominant-ancestry confidence surfaces from empirical ancestry estimates and
+user-defined geospatial surfaces.
+
+The original method was published using the term "ancestry probability
+surfaces." In `popmaps2`, the second output layer is described more narrowly as
+**dominant ancestry confidence** because it reports how strongly the top
+interpolated ancestry component dominates within a raster cell; it is not a
+Bayesian posterior probability or a full uncertainty interval.
 
 The package is in public alpha. It is installable, tested, documented, and
 usable for validation work, but it is not on CRAN yet and the public API may
@@ -21,7 +27,8 @@ into raster surfaces that can show:
 
 - hard population boundaries, where each raster cell is assigned to the most
   likely ancestry group;
-- ancestry probability, which summarizes confidence in those assignments;
+- dominant ancestry confidence, which summarizes how strongly the assigned
+  ancestry component dominates the others;
 - estimated ancestry coefficients for each ancestry axis or cluster;
 - uncertainty where empirical data do not support confident spatial
   interpolation.
@@ -49,7 +56,7 @@ Evolution*, 13, 2668-2681. <https://doi.org/10.1111/2041-210X.13902>
 - import helpers for raster stacks, point-derived geographic templates, `sf`
   locations, and raster-like EEMS/FEEMS exports;
 - report helpers for tuning and surface-comparison diagnostics;
-- modern map figures for ancestry probability, hard boundaries, and ancestry
+- modern map figures for dominant ancestry confidence, hard boundaries, and ancestry
   axes, including a manuscript-style preset;
 - local validation scripts for empirical example data kept outside the package.
 
@@ -176,8 +183,13 @@ input_locs <- locs_from_sf(
 | Element | Contents |
 | --- | --- |
 | `[[1]]` | Hard population boundary matrix |
-| `[[2]]` | Ancestry probability matrix |
+| `[[2]]` | Dominant ancestry confidence matrix |
 | `[[3]]...[[n]]` | Estimated ancestry coefficient matrices for each ancestry axis |
+
+In GeoTIFF exports from `write_popmaps()`, the default second layer name is
+`dominant_ancestry_confidence`. The legacy POPMAPS phrase "ancestry
+probability" is retained only when referring to the original publication or
+historical POPMAPS 1.03 terminology.
 
 Use `popmaps_rast()` and `write_popmaps()` for GeoTIFF conversion and export.
 Use `plot_popmaps()` and `write_popmaps_plot()` for modern map figures.
@@ -257,7 +269,7 @@ Common upstream or complementary tools include:
 
 | Software | Primary purpose | Relationship to `popmaps2` |
 | --- | --- | --- |
-| POPMAPS 1.03 | Original ancestry probability surface package. | Direct predecessor and validation reference. |
+| POPMAPS 1.03 | Original package for spatial ancestry interpolation with legacy second-layer terminology. | Direct predecessor and validation reference. |
 | conStruct, LEA, TESS3, ADMIXTURE-style tools | Infer ancestry or spatial population structure. | Potential sources of empirical ancestry estimates. |
 | EEMS, FEEMS, reems | Estimate migration or effective-resistance surfaces. | Potential sources of candidate conductance surfaces. |
 | ResistanceGA, Circuitscape, Omniscape | Optimize or evaluate resistance/connectivity surfaces. | Potential upstream sources of candidate surfaces or distances. |

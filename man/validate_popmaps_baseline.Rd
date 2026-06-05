@@ -18,7 +18,7 @@ maximum absolute difference, mean absolute difference, NA mismatches, and
 pass/fail status. The overall result is stored in the \code{passed} attribute.
 }
 \description{
-Runs a small Hilaria jamesii ancestry probability surface and
+Runs a small Hilaria jamesii spatial ancestry interpolation and
 compares the result to a frozen POPMAPS 1.03 reference output bundled with
 the package. This is intended as a quick scientific regression check before
 deeper optimization work changes the modeling internals. The check runs

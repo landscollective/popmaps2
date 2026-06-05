@@ -4,9 +4,9 @@
 \name{popmaps2-package}
 \alias{popmaps2}
 \alias{popmaps2-package}
-\title{popmaps2: Estimate and modernize ancestry probability surfaces}
+\title{popmaps2: Estimate spatial ancestry and assignment confidence}
 \description{
-An alpha-stage maintained successor to POPMAPS for estimating ancestry coefficients and ancestry probability surfaces from empirical genetic data across user-defined geospatial layers. The package preserves the POPMAPS 1.03 workflow while adding package infrastructure, documentation, tests, spatial-performance improvements, parameter tuning, candidate-surface comparison, and modern map outputs.
+An alpha-stage maintained successor to POPMAPS for estimating interpolated ancestry coefficients, hard ancestry assignments, and dominant-ancestry confidence surfaces from empirical genetic data across user-defined geospatial layers. The package preserves the POPMAPS 1.03 workflow while adding package infrastructure, documentation, tests, spatial-performance improvements, parameter tuning, candidate-surface comparison, and modern map outputs.
 }
 \seealso{
 Useful links:

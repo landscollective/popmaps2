@@ -44,7 +44,7 @@ genetically defined populations, as well as axis1 and axis2.}
 }
 \description{
 This function visualizes the environmental variability across a defined geographic area and within the estimated
-genetically defined populations of a species. After estimating an ancestry probability surface using popmaps(), a user would
+genetically defined populations of a species. After estimating hard ancestry assignments using popmaps(), a user would
 generate random background points for each genetically defined population using bg_pop_pts(). In addition, points representing the focal
 species (i.e., the 'focal points,' such as may be downloaded from a herbarium or biodiversity database) are assigned to the estimated
 populations using ptsNpop(). Finally, a principal components analysis (PCA) performed using popmap_pca() summarizes environmental

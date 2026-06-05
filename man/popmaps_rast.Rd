@@ -14,8 +14,9 @@ popmaps_rast(pop_raster_list, input_raster, layer_names = NULL)
 \code{terra::rast()}.}
 
 \item{layer_names}{Optional character vector of layer names. By default,
-layers are named \code{hard_boundary}, \code{ancestry_probability}, \code{axis_1},
-\code{axis_2}, and so on.}
+layers are named \code{hard_boundary}, \code{dominant_ancestry_confidence}, \code{axis_1},
+\code{axis_2}, and so on. The confidence layer is the rescaled dominance of the
+largest interpolated ancestry component, not a posterior probability.}
 }
 \value{
 A \code{terra::SpatRaster} with one layer per \code{popmaps()} output matrix.

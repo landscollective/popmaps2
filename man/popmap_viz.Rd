@@ -28,10 +28,10 @@ the spatial interpolation.}
 
 \item{maptype}{A string, either \code{"bound"} or \code{"ancestry"}, that defines the
 map type. \code{"bound"} draws hard boundaries only. \code{"ancestry"} draws hard
-boundaries and the maximum ancestry-probability surface.}
+boundaries and the legacy dominant ancestry confidence surface.}
 
 \item{pie_radius}{A numeric value modifying the size of the pie charts
-depicting empirical ancestry coefficients drawn on top of the probability
+depicting empirical ancestry coefficients drawn on top of the confidence
 surface.}
 
 \item{boundary_width}{Retained for compatibility with POPMAPS 1.03. Boundary buffering
@@ -46,8 +46,8 @@ for compatibility with POPMAPS 1.03-era scripts. New analyses should use
 \code{\link[=plot_popmaps]{plot_popmaps()}} or \code{\link[=write_popmaps_plot]{write_popmaps_plot()}}, which provide terra-based map
 output, manuscript-style defaults, optional background rasters, and PNG
 export. \code{popmap_viz()} can draw hard boundaries only or hard boundaries
-with ancestry probabilities. Pie charts representing empirical ancestry
-patterns are drawn at sampling sites.
+with dominant ancestry confidence. Pie charts representing empirical
+ancestry patterns are drawn at sampling sites.
 }
 \examples{
 \dontrun{

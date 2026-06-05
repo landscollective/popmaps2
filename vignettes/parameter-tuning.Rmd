@@ -23,7 +23,7 @@ combination predicts withheld empirical ancestry estimates well for the species,
 sampling design, and interpolation surface at hand.
 
 Lower RMSE, MAE, and Hellinger distance are better. Higher dominant ancestry
-accuracy and dominant ancestry probability are better.
+accuracy and dominant-axis support are better.
 
 ## Setup
 
@@ -148,7 +148,7 @@ committing to a more focused validation run.
 
 After choosing a parameter set, run `popmaps()` once with those values and
 export both analysis rasters and map figures. The map products should show the
-same uncertainty that drove parameter selection: broad low-probability regions
+same uncertainty that drove parameter selection: broad low-confidence regions
 are useful information, not a plotting failure.
 
 ```{r tuned-map}
@@ -179,7 +179,7 @@ write_popmaps_plot(
   input_raster = ex_raster,
   path = "tuned-popmaps-output/hija-tuned-map.png",
   input_locs = hija_struc,
-  type = "ancestry",
+  type = "confidence",
   style = "manuscript",
   background_threshold = 0.1015,
   overwrite = TRUE

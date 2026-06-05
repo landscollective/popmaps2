@@ -1,4 +1,4 @@
-#' popmaps2: Estimate and modernize ancestry probability surfaces
+#' popmaps2: Estimate spatial ancestry and assignment confidence
 #'
 #' @keywords internal
 #' @importFrom graphics boxplot mtext par plot points
