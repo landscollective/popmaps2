@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 message: "If you use popmaps2, cite the methods paper and the software version you used."
 type: software
-title: "popmaps2: Population Management using Ancestry Probability Surfaces"
+title: "popmaps2: Spatial Ancestry and Assignment Confidence"
 version: "0.1.0"
 date-released: "2026-05-28"
 license: "CC0-1.0"
 repository-code: "https://github.com/landscollective/popmaps2"
 url: "https://landscollective.github.io/popmaps2/"
-abstract: "An alpha-stage R package for estimating and validating ancestry probability surfaces from empirical ancestry estimates and user-defined geospatial surfaces."
+abstract: "An alpha-stage R package for estimating and validating interpolated ancestry coefficients, hard ancestry assignments, and dominant-ancestry confidence surfaces from empirical ancestry estimates and user-defined geospatial surfaces."
 authors:
   - family-names: Massatti
     given-names: Rob

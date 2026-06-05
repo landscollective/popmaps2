@@ -20,7 +20,7 @@ test_that("popmaps_rast returns named terra layers aligned to the input raster",
   expect_equal(terra::nlyr(raster_result), length(result))
   expect_equal(
     names(raster_result),
-    c("hard_boundary", "ancestry_probability", "axis_1", "axis_2", "axis_3")
+    c("hard_boundary", "dominant_ancestry_confidence", "axis_1", "axis_2", "axis_3")
   )
   expect_equal(
     terra::values(raster_result[[1]], mat = FALSE),
@@ -35,10 +35,10 @@ test_that("popmaps_rast validates dimensions and custom layer names", {
   named <- popmaps_rast(
     result,
     ex_raster,
-    layer_names = c("boundary", "probability", "axis one", "axis two", "axis three")
+    layer_names = c("boundary", "confidence", "axis one", "axis two", "axis three")
   )
 
-  expect_equal(names(named), c("boundary", "probability", "axis.one", "axis.two", "axis.three"))
+  expect_equal(names(named), c("boundary", "confidence", "axis.one", "axis.two", "axis.three"))
 
   result[[1]] <- matrix(1, nrow = 1, ncol = 1)
   expect_error(

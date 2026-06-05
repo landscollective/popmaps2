@@ -58,7 +58,7 @@ they are intentionally small, public, and documented.
 When a local run should produce map figures as well as rasters, save the full
 `popmaps()` result as an R object or rerun the final selected model and call
 `write_popmaps_plot()`. Use `style = "manuscript"` for manuscript-like grayscale
-probability maps, colored ancestry boundaries, and optional background habitat
+confidence maps, colored ancestry boundaries, and optional background habitat
 or suitability rasters.
 
 ## Example Species Surface Comparisons
@@ -112,7 +112,7 @@ The summary is intended to answer practical questions:
   empirical-site parameters.
 
 The next useful local artifact is usually a small figure set for each species:
-one ancestry-probability map, one hard-boundary map, and one map per ancestry
+one dominant-ancestry-confidence map, one hard-boundary map, and one map per ancestry
 axis. Those maps help determine whether the selected tuning results produce a
 biologically interpretable surface or only improve a validation score.
 

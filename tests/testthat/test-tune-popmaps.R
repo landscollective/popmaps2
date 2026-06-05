@@ -26,12 +26,34 @@ test_that("tune_popmaps returns parameter summaries and fold diagnostics", {
   expect_equal(tuning$results$half_distance_km, tuning$results$half_distance)
   expect_equal(tuning$results$ten_pct_distance_km, tuning$results$ten_pct_distance)
   expect_true(all(is.finite(tuning$results$rmse)))
+  expect_true(all(is.finite(tuning$results$dominant_axis_support)))
+  expect_equal(tuning$results$dominant_axis_support, tuning$results$dominant_probability)
+  expect_equal(tuning$folds$dominant_axis_support, tuning$folds$dominant_probability)
   expect_true(all(is.finite(tuning$folds$predicted_axis_1)))
   expect_true(all(is.finite(tuning$folds$observed_axis_1)))
   expect_equal(
     tuning$results$half_distance,
     log(0.5) / tuning$results$popmod
   )
+})
+
+test_that("tune_popmaps accepts dominant_axis_support as a primary metric", {
+  ex_raster <- raster::aggregate(hija_raster, fact = 240)
+
+  tuning <- tune_popmaps(
+    input_raster = ex_raster,
+    input_locs = hija_struc,
+    empirical_pt_dist = 0,
+    num_sites = 5,
+    num_tested = 2,
+    popmod = c(-0.01, -0.05),
+    primary_metric = "dominant_axis_support",
+    quiet = TRUE
+  )
+
+  expect_equal(tuning$primary_metric, "dominant_axis_support")
+  expect_equal(nrow(tuning$best), 1)
+  expect_true(is.finite(tuning$best$dominant_axis_support))
 })
 
 test_that("tune_popmaps can report validation progress", {

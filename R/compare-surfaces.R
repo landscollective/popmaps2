@@ -78,6 +78,7 @@ compare_popmaps_surfaces <- function(input_locs,
                                      spatial_block_seed = NULL,
                                      primary_metric = c("rmse", "mae", "hellinger",
                                                         "dominant_accuracy",
+                                                        "dominant_axis_support",
                                                         "dominant_probability"),
                                      dist_prob_func = function(popmod_temp, distance) {
                                        exp(popmod_temp * distance)

@@ -3,7 +3,7 @@
 \docType{data}
 \name{hija_raster}
 \alias{hija_raster}
-\title{Geospatial layer for ancestry probability surface estimation}
+\title{Geospatial layer for spatial ancestry interpolation}
 \format{
 A RasterLayer object with 480 rows and 540 columns. Values in the cells
 are logistic probabilities of occurrence calculated by Maxent.

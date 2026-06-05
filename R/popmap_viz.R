@@ -5,8 +5,8 @@
 #'     [plot_popmaps()] or [write_popmaps_plot()], which provide terra-based map
 #'     output, manuscript-style defaults, optional background rasters, and PNG
 #'     export. `popmap_viz()` can draw hard boundaries only or hard boundaries
-#'     with ancestry probabilities. Pie charts representing empirical ancestry
-#'     patterns are drawn at sampling sites.
+#'     with dominant ancestry confidence. Pie charts representing empirical
+#'     ancestry patterns are drawn at sampling sites.
 #' @param input_raster An R RasterLayer object defining the geographic extent for
 #'     the spatial interpolation.
 #' @param input_locs An R object with rows as empirical sites and columns as:
@@ -17,9 +17,9 @@
 #' @param pop_raster_list An R object resulting from executing [popmaps()].
 #' @param maptype A string, either `"bound"` or `"ancestry"`, that defines the
 #'     map type. `"bound"` draws hard boundaries only. `"ancestry"` draws hard
-#'     boundaries and the maximum ancestry-probability surface.
+#'     boundaries and the legacy dominant ancestry confidence surface.
 #' @param pie_radius A numeric value modifying the size of the pie charts
-#'     depicting empirical ancestry coefficients drawn on top of the probability
+#'     depicting empirical ancestry coefficients drawn on top of the confidence
 #'     surface.
 #' @param boundary_width Retained for compatibility with POPMAPS 1.03. Boundary buffering
 #'     previously depended on retired spatial packages and is no longer applied.
@@ -54,7 +54,7 @@ popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=
 
 	h_boundary <- raster::raster(pop_raster_list[[1]],xmn=xmin,xmx=xmin+(cell_size*ncols),ymn=ymax-(cell_size*nrows),ymx=ymax,crs= sp::CRS(crs))
 
-	ancest_surface <- raster::raster(pop_raster_list[[2]],xmn=xmin,xmx=xmin+(cell_size*ncols),ymn=ymax-(cell_size*nrows),ymx=ymax,crs= sp::CRS(crs))
+	confidence_surface <- raster::raster(pop_raster_list[[2]],xmn=xmin,xmx=xmin+(cell_size*ncols),ymn=ymax-(cell_size*nrows),ymx=ymax,crs= sp::CRS(crs))
 	
 	num_axes <- length(input_locs[1,])-3
 	colors_axes <- viridis::viridis(num_axes,begin=0,end=1,direction=-1)
@@ -82,7 +82,7 @@ popmap_viz <- function(pop_raster_list='',input_locs='',input_raster='',maptype=
 			plotrix::floating.pie(input_locs[i,2],input_locs[i,3],as.numeric(input_locs[i,4:(4+(num_axes-1))]),radius=pie_radius,col=colors_axes)
 		}	
 	} else if (maptype == 'ancestry'){
-		temp_raster <- ancest_surface
+		temp_raster <- confidence_surface
 		#temp_raster[temp_raster[]==-9999] <-0
 		breakpoints <- c(0,.05,.10,.15,.20,.25,.30,.35,.40,.45,.50,.55,.60,.65,.70,.75,.80,.85,.90,.95,1.00)
 		colors <- grey.colors(20,start=1,end=0.3)

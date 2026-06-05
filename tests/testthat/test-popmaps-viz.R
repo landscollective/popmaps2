@@ -3,12 +3,12 @@ popmaps_test_output <- function(input_raster, n_axes) {
   ncols <- raster::ncol(input_raster)
   cell_ids <- matrix(seq_len(nrows * ncols), nrow = nrows, ncol = ncols)
   boundary <- matrix(((cell_ids - 1L) %% n_axes) + 1L, nrow = nrows, ncol = ncols)
-  probability <- matrix(seq(0.1, 0.95, length.out = nrows * ncols), nrow = nrows, ncol = ncols)
+  confidence <- matrix(seq(0.1, 0.95, length.out = nrows * ncols), nrow = nrows, ncol = ncols)
   axes <- lapply(seq_len(n_axes), function(idx) {
     matrix(idx / n_axes, nrow = nrows, ncol = ncols)
   })
 
-  c(list(boundary, probability), axes)
+  c(list(boundary, confidence), axes)
 }
 
 test_that("plot_popmaps draws supported modern map types", {
@@ -20,9 +20,10 @@ test_that("plot_popmaps draws supported modern map types", {
   on.exit(grDevices::dev.off(), add = TRUE)
 
   expect_s4_class(
-    plot_popmaps(result, ex_raster, hija_struc, type = "ancestry", legend = FALSE),
+    plot_popmaps(result, ex_raster, hija_struc, type = "confidence", legend = FALSE),
     "SpatRaster"
   )
+  expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "ancestry", legend = FALSE))
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "boundary", sites = "points", legend = FALSE))
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "axis", axis = 1, sites = "none", legend = FALSE))
   expect_silent(plot_popmaps(result, ex_raster, hija_struc, type = "axis", axis = "axis_2", sites = "none", legend = FALSE))
@@ -31,7 +32,7 @@ test_that("plot_popmaps draws supported modern map types", {
       result,
       ex_raster,
       hija_struc,
-      type = "ancestry",
+      type = "confidence",
       style = "manuscript",
       background_threshold = 0,
       legend = FALSE

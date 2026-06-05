@@ -52,7 +52,7 @@ head(hija_struc)
 
 If locations are stored as `sf` point features, convert them first:
 
-```{r}
+```{r, purl = FALSE}
 input_locs <- locs_from_sf(
   sf_points,
   site_col = "site",
@@ -79,7 +79,7 @@ data are projected, it may mean meters.
 
 An SDM logistic suitability raster can be treated as conductance:
 
-```{r}
+```{r, purl = FALSE}
 sdm_surface <- prepare_popmaps_surface(
   input_raster = sdm_raster,
   surface = "C",
@@ -89,7 +89,7 @@ sdm_surface <- prepare_popmaps_surface(
 
 A resistance raster can be supplied directly and inverted internally:
 
-```{r}
+```{r, purl = FALSE}
 resistance_surface <- prepare_popmaps_surface(
   input_raster = resistance_raster,
   surface = "C",
@@ -100,7 +100,7 @@ resistance_surface <- prepare_popmaps_surface(
 If a multi-layer raster contains several candidate surfaces, convert every layer
 into a named list:
 
-```{r}
+```{r, purl = FALSE}
 candidate_surfaces <- surfaces_from_raster_stack(
   input_raster = multi_layer_raster,
   surface = "C",
@@ -112,7 +112,7 @@ candidate_surfaces <- surfaces_from_raster_stack(
 EEMS and FEEMS outputs should be generated outside `popmaps2`, then imported as
 raster-like outputs or coordinate/value tables:
 
-```{r}
+```{r, purl = FALSE}
 eems_surface <- surface_from_eems(
   input = eems_table,
   value_col = "migration",
@@ -133,7 +133,7 @@ surface. With `surface_grid = "surface_specific"`, missing tuning values are
 suggested separately for each surface so geographic kilometers and least-cost
 distance units are not forced onto the same scale.
 
-```{r}
+```{r, purl = FALSE}
 surfaces <- list(
   geographic = geographic_surface,
   sdm_suitability = sdm_surface,
@@ -154,7 +154,7 @@ comparison$support
 ```
 
 Lower RMSE, MAE, and Hellinger distance are better. Higher dominant ancestry
-accuracy and dominant ancestry probability are better. The default support rule
+accuracy and dominant-axis support are better. The default support rule
 labels a surface as clearly supported only when no other surface is within the
 near-best tolerance.
 
@@ -162,7 +162,7 @@ near-best tolerance.
 
 Use the report helper to create CSVs, plots, and a short Markdown report:
 
-```{r}
+```{r, purl = FALSE}
 report <- write_surface_comparison_report(
   comparison,
   dir = "surface-comparison-report",
@@ -183,7 +183,7 @@ Once a surface and parameter set are selected, use the same surface in
 `popmaps()` and export the resulting rasters and map figures. This keeps the
 validation decision connected to the management product.
 
-```{r selected-surface-map}
+```{r selected-surface-map, purl = FALSE}
 best_surface <- comparison$best$surface_name[1]
 selected_surface <- surfaces[[best_surface]]
 selected_params <- comparison$best[1, ]
@@ -211,14 +211,14 @@ write_popmaps_plot(
   input_raster = selected_surface$raster,
   path = "selected-surface-map.png",
   input_locs = input_locs,
-  type = "ancestry",
+  type = "confidence",
   style = "manuscript",
   overwrite = TRUE
 )
 ```
 
 For suitability or conductance surfaces, a `background_threshold` can be added
-to show ancestry probabilities only in cells treated as occupied or suitable.
+to show confidence or ancestry-axis values only in cells treated as occupied or suitable.
 That is a visualization mask, not a new model fit.
 
 ## Practical Guidance

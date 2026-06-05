@@ -58,21 +58,23 @@ popmaps_geographic_surface <- function(raster_surface,
       numeric(1)
     )
 
-    cell_prob <- colSums(ancestry[selected_sites, , drop = FALSE] * (site_weights / num_tested))
-    max_avg <- max(cell_prob) / sum(cell_prob)
+    weighted_ancestry <- colSums(ancestry[selected_sites, , drop = FALSE] * (site_weights / num_tested))
+    dominant_share <- max(weighted_ancestry) / sum(weighted_ancestry)
 
-    if (is.na(max_avg)) {
-      max_avg <- 0
+    if (is.na(dominant_share)) {
+      dominant_share <- 0
     }
 
-    if (max_avg < 0.5) {
-      max_avg <- 0
+    # Convert dominant ancestry share to the legacy POPMAPS confidence scale.
+    # This reports assignment dominance, not posterior probability.
+    if (dominant_share < 0.5) {
+      dominant_confidence <- 0
     } else {
-      max_avg <- (max_avg - 0.5) * 2
+      dominant_confidence <- (dominant_share - 0.5) * 2
     }
 
-    result[cell_idx, 2] <- max_avg
-    result[cell_idx, seq.int(3, num_axes + 2)] <- cell_prob
+    result[cell_idx, 2] <- dominant_confidence
+    result[cell_idx, seq.int(3, num_axes + 2)] <- weighted_ancestry
   }
 
   output <- list(

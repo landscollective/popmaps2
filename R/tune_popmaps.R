@@ -43,6 +43,9 @@
 #'   layouts. The first repeat uses the deterministic default partition; later
 #'   repeats use random spatial rotations.
 #' @param primary_metric Metric used to select the best parameter combination.
+#'   `dominant_axis_support` is the normalized predicted support for the
+#'   observed dominant ancestry axis. `dominant_probability` is retained as a
+#'   legacy alias with the same values.
 #' @param dist_prob_func Function defining the relationship between distance and
 #'   empirical-site contribution.
 #' @param rescale_conductance Logical. If `TRUE`, scale conductance values by
@@ -92,6 +95,7 @@ tune_popmaps <- function(input_raster = "",
                          spatial_block_seed = NULL,
                          primary_metric = c("rmse", "mae", "hellinger",
                                             "dominant_accuracy",
+                                            "dominant_axis_support",
                                             "dominant_probability"),
                          dist_prob_func = function(popmod_temp, distance) {
                            exp(popmod_temp * distance)
@@ -489,6 +493,7 @@ adaptive_tune_popmaps <- function(input_raster = "",
                                   spatial_block_seed = NULL,
                                   primary_metric = c("rmse", "mae", "hellinger",
                                                      "dominant_accuracy",
+                                                     "dominant_axis_support",
                                                      "dominant_probability"),
                                   dist_prob_func = function(popmod_temp, distance) {
                                     exp(popmod_temp * distance)
@@ -1367,7 +1372,7 @@ popmaps_refine_numeric_values <- function(top_values, full_values, lower_bound =
 }
 
 popmaps_metric_is_maximized <- function(primary_metric) {
-  primary_metric %in% c("dominant_accuracy", "dominant_probability")
+  primary_metric %in% c("dominant_accuracy", "dominant_axis_support", "dominant_probability")
 }
 
 popmaps_percent_change <- function(delta, reference) {
@@ -1579,7 +1584,7 @@ popmaps_predict_site_from_distances <- function(site_idx,
                                                 site_distances,
                                                 empirical_distances) {
   axis_cols <- seq.int(4, ncol(locations))
-  observed <- popmaps_normalize_probability(as.numeric(locations[site_idx, axis_cols]))
+  observed <- popmaps_normalize_ancestry(as.numeric(locations[site_idx, axis_cols]))
 
   if (any(is.na(observed))) {
     return(popmaps_failed_tuning_prediction(
@@ -1656,8 +1661,8 @@ popmaps_predict_site_from_distances <- function(site_idx,
     ))
   }
 
-  cell_prob <- colSums(training_ancestry[selected_sites, , drop = FALSE] * (site_weights / num_tested))
-  predicted <- popmaps_normalize_probability(cell_prob)
+  weighted_ancestry <- colSums(training_ancestry[selected_sites, , drop = FALSE] * (site_weights / num_tested))
+  predicted <- popmaps_normalize_ancestry(weighted_ancestry)
   if (any(is.na(predicted))) {
     return(popmaps_failed_tuning_prediction(
       observed = observed,
@@ -1682,13 +1687,14 @@ popmaps_failed_tuning_prediction <- function(observed, message) {
       rmse = NA_real_,
       hellinger = NA_real_,
       dominant_accuracy = NA_real_,
+      dominant_axis_support = NA_real_,
       dominant_probability = NA_real_
     ),
     message = message
   )
 }
 
-popmaps_normalize_probability <- function(x) {
+popmaps_normalize_ancestry <- function(x) {
   x <- as.numeric(x)
   if (any(!is.finite(x)) || any(x < 0)) {
     return(rep(NA_real_, length(x)))
@@ -1710,6 +1716,7 @@ popmaps_score_prediction <- function(predicted, observed) {
     rmse = sqrt(mean(diff^2)),
     hellinger = sqrt(sum((sqrt(predicted) - sqrt(observed))^2)) / sqrt(2),
     dominant_accuracy = as.numeric(which.max(predicted) == which.max(observed)),
+    dominant_axis_support = predicted[which.max(observed)],
     dominant_probability = predicted[which.max(observed)]
   )
 }
@@ -1748,6 +1755,7 @@ popmaps_tuning_fold_row <- function(combo,
       rmse = prediction$metrics[["rmse"]],
       hellinger = prediction$metrics[["hellinger"]],
       dominant_accuracy = prediction$metrics[["dominant_accuracy"]],
+      dominant_axis_support = prediction$metrics[["dominant_axis_support"]],
       dominant_probability = prediction$metrics[["dominant_probability"]],
       message = prediction$message,
       stringsAsFactors = FALSE
@@ -1769,6 +1777,7 @@ popmaps_summarize_tuning_results <- function(folds) {
     "rmse",
     "hellinger",
     "dominant_accuracy",
+    "dominant_axis_support",
     "dominant_probability"
   )
   combo_ids <- unique(folds$combo_id)

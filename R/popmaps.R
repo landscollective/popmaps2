@@ -1,8 +1,10 @@
-#' @title Estimate an ancestry probability surface
+#' @title Estimate interpolated ancestry and assignment-confidence surfaces
 #'
-#' @description This function estimates an ancestry probability surface when supplied
-#'     a geospatial layer and empirical genetic data describing patterns of ancestry coefficients
-#'     across sampling locations. 
+#' @description This function estimates spatially explicit ancestry surfaces
+#'     when supplied a geospatial layer and empirical genetic data describing
+#'     ancestry coefficients across sampling locations. The second output layer
+#'     is a dominant-ancestry confidence score: the rescaled dominance of the
+#'     largest interpolated ancestry component, not a posterior probability.
 #' @param input_raster An R RasterLayer object defining the geographic extent for the spatial
 #'     interpolation. Values in the cells will be used to calculate distance used in the
 #'     dist_prob_func if surface = 'C'. See example data hija_raster.
@@ -57,7 +59,7 @@
 #'     candidate sites by least-cost distance.
 #' @param quiet Logical. If `FALSE`, print progress messages for input
 #'     validation, distance preparation, and raster-cell prediction.
-#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using 
+#' @references Massatti R & Winkler DE. (2022) Spatially explicit management of genetic diversity using
 #'     ancestry probability surfaces. Methods in Ecology and Evolution. http://dx.doi.org/10.1111/2041-210X.13902
 #' @author Rob Massatti
 #' @examples

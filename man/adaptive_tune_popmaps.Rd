@@ -23,7 +23,7 @@ adaptive_tune_popmaps(
   spatial_block_repeats = 1,
   spatial_block_seed = NULL,
   primary_metric = c("rmse", "mae", "hellinger", "dominant_accuracy",
-    "dominant_probability"),
+    "dominant_axis_support", "dominant_probability"),
   dist_prob_func = function(popmod_temp, distance) {
      exp(popmod_temp * distance)
  },
@@ -82,7 +82,10 @@ partitions and report repeat-level uncertainty.}
 layouts. The first repeat uses the deterministic default partition; later
 repeats use random spatial rotations.}
 
-\item{primary_metric}{Metric used to select the best parameter combination.}
+\item{primary_metric}{Metric used to select the best parameter combination.
+\code{dominant_axis_support} is the normalized predicted support for the
+observed dominant ancestry axis. \code{dominant_probability} is retained as a
+legacy alias with the same values.}
 
 \item{dist_prob_func}{Function defining the relationship between distance and
 empirical-site contribution.}

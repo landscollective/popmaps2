@@ -2,7 +2,7 @@
   {
     "name": "popmaps2",
     "organization": "Lands Collective",
-    "description": "Maintained successor to POPMAPS for estimating ancestry probability surfaces from empirical genetic data",
+    "description": "Maintained successor to POPMAPS for estimating interpolated ancestry and dominant-ancestry confidence surfaces from empirical genetic data",
     "version": "0.1.0",
     "status": "Alpha",
     "permissions": {
@@ -19,7 +19,7 @@
     "vcs": "git",
     "tags": [
       "population genetics",
-      "ancestry probability surfaces",
+      "dominant ancestry confidence",
       "conservation genetics",
       "restoration genetics",
       "seed transfer zones",

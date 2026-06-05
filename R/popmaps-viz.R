@@ -10,12 +10,13 @@
 #'   `terra::SpatRaster`, a legacy `raster::RasterLayer`, or a raster file path.
 #' @param input_locs Optional POPMAPS location table. When supplied, empirical
 #'   sampling locations are drawn as ancestry pies or dominant-ancestry points.
-#' @param type Map type to draw. `"ancestry"` plots the maximum ancestry
-#'   probability layer, `"boundary"` plots hard population assignments, and
-#'   `"axis"` plots one ancestry-axis probability layer.
+#' @param type Map type to draw. `"confidence"` plots the dominant ancestry
+#'   confidence layer, `"boundary"` plots hard population assignments, and
+#'   `"axis"` plots one weighted ancestry-axis layer. `"ancestry"` is accepted
+#'   as a legacy alias for `"confidence"`.
 #' @param style Plot style. `"modern"` uses the default popmaps2 map style.
 #'   `"manuscript"` uses a Massatti and Winkler (2022)-inspired style with
-#'   grayscale probabilities, colored hard-boundary outlines, muted suitability
+#'   grayscale confidence, colored hard-boundary outlines, muted suitability
 #'   background, and state outlines when available.
 #' @param axis Ancestry axis used when `type = "axis"`. Supply either an integer
 #'   axis number or a layer name such as `"axis_1"`.
@@ -34,10 +35,10 @@
 #'   boundaries. Named palettes are matched to base R HCL palettes, or a custom
 #'   color vector may be supplied.
 #' @param background_raster Optional suitability, habitat, or prediction raster
-#'   drawn beneath the POPMAPS probability layer. In `style = "manuscript"`, this
+#'   drawn beneath the POPMAPS confidence layer. In `style = "manuscript"`, this
 #'   defaults to `input_raster`.
 #' @param background_threshold Optional numeric cutoff. When supplied, ancestry
-#'   probability or axis values are shown only where `background_raster` is
+#'   confidence or axis values are shown only where `background_raster` is
 #'   greater than or equal to the cutoff; lower cells show only the background.
 #' @param background_palette Color palette for `background_raster`.
 #' @param state_lines Logical. If `TRUE`, overlay state boundaries from the
@@ -79,7 +80,7 @@
 plot_popmaps <- function(pop_raster_list,
                          input_raster,
                          input_locs = NULL,
-                         type = c("ancestry", "boundary", "axis"),
+                         type = c("confidence", "boundary", "axis", "ancestry"),
                          style = c("modern", "manuscript"),
                          axis = 1,
                          sites = c("pies", "points", "none"),
@@ -110,7 +111,7 @@ plot_popmaps <- function(pop_raster_list,
   sites <- match.arg(sites)
   if (style == "manuscript") {
     if (missing(palette)) {
-      palette <- "manuscript_probability"
+      palette <- "manuscript_confidence"
     }
     if (missing(boundary_palette)) {
       boundary_palette <- "manuscript_axes"
@@ -157,10 +158,11 @@ plot_popmaps <- function(pop_raster_list,
   }
 
   axis_colors <- popmaps_viz_palette(boundary_palette, num_axes)
-  plot_layer <- popmaps_viz_select_layer(raster_output, type, axis)
-  plot_main <- popmaps_viz_title(type, plot_layer, main)
+  plot_type <- popmaps_viz_resolve_type(type)
+  plot_layer <- popmaps_viz_select_layer(raster_output, plot_type, axis)
+  plot_main <- popmaps_viz_title(plot_type, plot_layer, main)
   background_layer <- popmaps_prepare_viz_background(background_raster, raster_output)
-  probability_breaks <- if (style == "manuscript") {
+  confidence_breaks <- if (style == "manuscript") {
     seq(0, 1, length.out = n + 1L)
   } else {
     NULL
@@ -217,7 +219,7 @@ plot_popmaps <- function(pop_raster_list,
     popmaps_plot_continuous_map(
       layer = display_layer,
       colors = popmaps_viz_palette(palette, n),
-      breaks = probability_breaks,
+      breaks = confidence_breaks,
       legend = legend,
       axes = if (is.null(background_layer)) axes else FALSE,
       frame.plot = if (is.null(background_layer)) frame.plot else FALSE,
@@ -280,7 +282,7 @@ write_popmaps_plot <- function(pop_raster_list,
                                input_raster,
 	                               path,
 	                               input_locs = NULL,
-	                               type = c("ancestry", "boundary", "axis"),
+                               type = c("confidence", "boundary", "axis", "ancestry"),
 	                               style = c("modern", "manuscript"),
 	                               axis = 1,
 	                               sites = c("pies", "points", "none"),
@@ -313,7 +315,7 @@ write_popmaps_plot <- function(pop_raster_list,
   style <- match.arg(style)
   if (style == "manuscript") {
     if (missing(palette)) {
-      palette <- "manuscript_probability"
+      palette <- "manuscript_confidence"
     }
     if (missing(boundary_palette)) {
       boundary_palette <- "manuscript_axes"
@@ -572,8 +574,8 @@ popmaps_draw_axis_legend <- function(axis_colors, map_extent) {
 }
 
 popmaps_viz_select_layer <- function(raster_output, type, axis) {
-  if (type == "ancestry") {
-    return("ancestry_probability")
+  if (type == "confidence") {
+    return("dominant_ancestry_confidence")
   }
   if (type == "boundary") {
     return("hard_boundary")
@@ -601,10 +603,18 @@ popmaps_viz_title <- function(type, layer, main) {
   }
   switch(
     type,
-    ancestry = "Ancestry probability",
+    confidence = "Dominant ancestry confidence",
     boundary = "Hard ancestry boundary",
     axis = paste("Ancestry", gsub("_", " ", layer))
   )
+}
+
+popmaps_viz_resolve_type <- function(type) {
+  if (identical(type, "ancestry")) {
+    return("confidence")
+  }
+
+  type
 }
 
 popmaps_viz_palette <- function(palette, n) {
@@ -652,7 +662,14 @@ popmaps_match_hcl_palette <- function(palette) {
 
 popmaps_special_viz_palette <- function(palette, n) {
   key <- gsub("[^a-z0-9]", "", tolower(palette))
-  if (key %in% c("manuscriptprobability", "probabilitygray", "probabilitygrey")) {
+  if (key %in% c(
+    "manuscriptconfidence",
+    "confidencegray",
+    "confidencegrey",
+    "manuscriptprobability",
+    "probabilitygray",
+    "probabilitygrey"
+  )) {
     return(grDevices::gray.colors(n, start = 1, end = 0.08))
   }
   if (key %in% c("manuscriptbackground", "habitatbackground")) {
